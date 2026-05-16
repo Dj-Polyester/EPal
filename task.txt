@@ -1,0 +1,36 @@
+Create an application where a user can create virtual ai characters of any sort and chat with them. Add a README that 
+gives detailed instructions for setup and running the app. 
+
+First Usage steps
+1) A skippable welcoming screen opens and a text input is displayed.
+2) If user enters information about themselves to the text input it is saved and the characters the user created will remember that
+3) If user skips, nothing is saved
+4) The user is redirected to the character creation screen 
+Character creation steps
+1) User taps/clicks on character creation button
+2) A text input for prompting is displayed and user is redirected to the character creation screen
+3) User gives a prompt to the application describing the personality and traits of the character.  
+4) A character is generated with the personality and traits
+5) A chat with the character is added to the chats and the user is redirected to the chat interface 
+
+Specifics
+* For the new users, the welcome page is the aforementioned welcoming screen
+* For familiar users, the welcome page is the chat interface
+* User should be able to create multiple characters
+* The app is able to operate multiple chats, each chat between a user and a character
+* A prompt randomization feature should be available in the character creation screen for users that dont know the character they want
+* Whenever a user requests a media about the context, the character should be able to generate it. Otherwise it says 
+it does not have the media.
+* The way the character chats should reflect its personality
+* The character has remembers past events, the info about itself and the user
+* Character creation uses comfyscript
+* LLMs use vLLM
+* The app should be scalable
+* The app should be cross-platform
+* Backend programming language is Python
+* Use uv venv for Python dependencies
+
+Example:
+I am into anime. I am an eccentric person who likes making people 
+laugh. I like learning and openmindedness but I like to hurry and 
+dont know when to do the proper thing sometimes 

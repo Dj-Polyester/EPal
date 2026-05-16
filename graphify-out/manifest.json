@@ -1,0 +1,170 @@
+{
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/main.py": {
+    "mtime": 1778781751.1582024,
+    "hash": "d7b11135315ade7cfe46348c18cd3d9f"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/db.py": {
+    "mtime": 1778781408.8099318,
+    "hash": "62d7de873eed23afab209c78ff17094a"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/config.py": {
+    "mtime": 1778781406.6099362,
+    "hash": "0f127d516f96c03accd1453acf29a260"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/dependencies.py": {
+    "mtime": 1778781472.866798,
+    "hash": "af580804a5c1b8a7f76462056448053e"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/__init__.py": {
+    "mtime": 1778782090.9524539,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/comfy_service.py": {
+    "mtime": 1778782476.143073,
+    "hash": "f306553456101fad04e3bfa618283e73"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/memory_service.py": {
+    "mtime": 1778782647.6559699,
+    "hash": "ea07b44aba57932788e9cf94f8b3fd62"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/vllm_service.py": {
+    "mtime": 1778781635.6674519,
+    "hash": "95fee45f3b05d76839313d68dc3c3c10"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/__init__.py": {
+    "mtime": 1778782090.9524539,
+    "hash": "40fb7ca82dcaef2acfb7eee6bb2f0bae"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/media.py": {
+    "mtime": 1778781446.4558532,
+    "hash": "00d98e6ff44d6aebadd0fa8d88d59dca"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/character.py": {
+    "mtime": 1778781415.7739172,
+    "hash": "acce3bf8ec570e48f88a68c9e74d6a43"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/chat.py": {
+    "mtime": 1778781418.5499115,
+    "hash": "86a8a341239dbc644bb4a754ac17de20"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/message.py": {
+    "mtime": 1778781425.8108964,
+    "hash": "e7917646156897bf3c397e8754d8bc41"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/__init__.py": {
+    "mtime": 1778782090.9524539,
+    "hash": "4369787ca3adbb29cc172fa58b3a6726"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/user.py": {
+    "mtime": 1778781411.7119257,
+    "hash": "c04c4cdffe50cbd6d88c692eaea79ba1"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/chats.py": {
+    "mtime": 1778782608.6817942,
+    "hash": "bd10ba71b0227d5777e2d60c2d212514"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/characters.py": {
+    "mtime": 1778781553.294628,
+    "hash": "d36bcb6e6ce37e07eef02d2416ed3090"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/auth.py": {
+    "mtime": 1778781504.9857304,
+    "hash": "baeed2cb24728b0ec5bbc6a74c84cba6"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/users.py": {
+    "mtime": 1778781511.215717,
+    "hash": "79e738a134865beb4ee303a7123d2a24"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/__init__.py": {
+    "mtime": 1778782090.9524539,
+    "hash": "d7f90a4b85918e70bf66ae81eea87187"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/websocket/chat_ws.py": {
+    "mtime": 1778782373.9363613,
+    "hash": "f16ef0d0e3744233cc055e481061f794"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/websocket/__init__.py": {
+    "mtime": 1778782090.9524539,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/alembic/env.py": {
+    "mtime": 1778782349.1151643,
+    "hash": "c8fea08b77bb9adfecf25ed7566e218d"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/alembic/versions/001_initial.py": {
+    "mtime": 1778781807.5230794,
+    "hash": "c4afd99fa758e8094b9d34960baf02b3"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/postcss.config.js": {
+    "mtime": 1778782001.2726529,
+    "hash": "ef3ba2a81ba19f8ea5ddf625521e96f0"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/tailwind.config.js": {
+    "mtime": 1778782000.5926545,
+    "hash": "3346df3fd0a1ea3f84440703bf8fd2cb"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/vite.config.ts": {
+    "mtime": 1778781826.5440378,
+    "hash": "22957e138dfe871ce0f5087d54bdcebf"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/vite-env.d.ts": {
+    "mtime": 1778782581.9766648,
+    "hash": "0352474ba2918efe13895edbc3780d94"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/App.tsx": {
+    "mtime": 1778781999.6876564,
+    "hash": "2966231348965d2a13c6218c289acadb"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/main.tsx": {
+    "mtime": 1778781840.2760077,
+    "hash": "42c0b1d9c2751a5e4e55876cee46fc57"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/contexts/AuthContext.tsx": {
+    "mtime": 1778782559.3585494,
+    "hash": "6701921b01b632177429e2669129922d"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/CharacterCreate/CharacterCreate.tsx": {
+    "mtime": 1778781941.7517846,
+    "hash": "9fe6f878a4dbe20a42ca209b6eb7490d"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Auth/Register.tsx": {
+    "mtime": 1778781888.1999025,
+    "hash": "25cb2760b22c00e8baa4b4d64da57bad"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Auth/Login.tsx": {
+    "mtime": 1778781872.4589372,
+    "hash": "cde6824d1d5af40895460ee5d23d20cb"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Chat/ChatRoom.tsx": {
+    "mtime": 1778782346.8451457,
+    "hash": "e81510f8771f0f0c660578250abd227f"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Onboarding/WelcomeScreen.tsx": {
+    "mtime": 1778782558.1175427,
+    "hash": "021b77b950a05450f42e0319a01bdec2"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Dashboard/Dashboard.tsx": {
+    "mtime": 1778782543.676466,
+    "hash": "f172a4833170d6fb2dd430466b4b723d"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/api/client.ts": {
+    "mtime": 1778782542.6124601,
+    "hash": "c8b4d9bb37cd80cb89fa65244e43e2dd"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/docker-compose.yml": {
+    "mtime": 1778782226.5520282,
+    "hash": "2df8e5fa950252565f547270bc5a12c4"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/task.txt": {
+    "mtime": 1778780836.3480406,
+    "hash": "20fd9dce10c1afa9e82ecd807fc4a2b8"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/README.md": {
+    "mtime": 1778782027.1605954,
+    "hash": "e4508596f6f208fa964001f4d4ee864c"
+  },
+  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/index.html": {
+    "mtime": 1778781838.0540125,
+    "hash": "18f9184d5efb43b21dcdd227a9b4590d"
+  }
+}

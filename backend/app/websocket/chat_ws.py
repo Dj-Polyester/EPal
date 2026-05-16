@@ -1,0 +1,151 @@
+import json
+import uuid
+from fastapi import WebSocket, WebSocketDisconnect
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
+from sqlalchemy.orm import selectinload
+from app.db import AsyncSessionLocal
+from app.dependencies import get_current_user_ws
+from app.models import Chat, Message, Character, User, Media
+from app.services.memory_service import build_chat_context, extract_media_requests, replace_media_tags
+from app.services.vllm_service import chat_completion
+from app.services.comfy_service import generate_media
+
+
+async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
+    await websocket.accept()
+
+    db: AsyncSession = AsyncSessionLocal()
+    try:
+        # Authenticate
+        user = await get_current_user_ws(token, db)
+        if not user:
+            await websocket.send_json({"type": "error", "message": "Invalid token"})
+            await websocket.close(code=4001)
+            return
+
+        # Verify chat ownership
+        chat_uuid = uuid.UUID(chat_id)
+        result = await db.execute(
+            select(Chat)
+            .where(and_(Chat.id == chat_uuid, Chat.user_id == user.id))
+            .options(selectinload(Chat.character))
+        )
+        chat = result.scalar_one_or_none()
+        if not chat:
+            await websocket.send_json({"type": "error", "message": "Chat not found"})
+            await websocket.close(code=4004)
+            return
+
+        character = chat.character
+        user_bio = user.bio
+
+        await websocket.send_json({"type": "connected", "chat_id": chat_id})
+
+        while True:
+            data = await websocket.receive_text()
+            try:
+                payload = json.loads(data)
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "message": "Invalid JSON"})
+                continue
+
+            msg_type = payload.get("type")
+            if msg_type != "message":
+                continue
+
+            user_text = payload.get("content", "").strip()
+            if not user_text:
+                continue
+
+            # Save user message
+            user_msg = Message(chat_id=chat.id, role="user", content=user_text)
+            db.add(user_msg)
+            await db.commit()
+
+            await websocket.send_json({
+                "type": "user_message",
+                "id": str(user_msg.id),
+                "content": user_text,
+                "created_at": user_msg.created_at.isoformat() if user_msg.created_at else None,
+            })
+
+            # Build context with memory
+            context = await build_chat_context(
+                db=db,
+                chat=chat,
+                character_personality=character.personality_prompt,
+                user_bio=user_bio,
+                new_user_message=user_text,
+            )
+
+            # Stream thinking indicator
+            await websocket.send_json({"type": "typing", "status": "start"})
+
+            # Get vLLM response
+            try:
+                assistant_text = await chat_completion(context, max_tokens=512, temperature=0.8)
+            except Exception as e:
+                await websocket.send_json({"type": "error", "message": f"AI response failed: {str(e)}"})
+                continue
+            finally:
+                await websocket.send_json({"type": "typing", "status": "stop"})
+
+            # Extract media requests
+            media_requests = extract_media_requests(assistant_text)
+            media_replacements: list[tuple[str, str | None]] = []
+
+            for media_type, description in media_requests:
+                media_url = await generate_media(
+                    media_type,
+                    description,
+                    source_image_url=character.avatar_url,
+                )
+                media_replacements.append((media_type, media_url))
+
+                # If media generated, save media record
+                if media_url:
+                    media_record = Media(
+                        chat_id=chat.id,
+                        media_type=media_type,
+                        prompt=description,
+                        url=media_url,
+                        status="completed",
+                    )
+                    db.add(media_record)
+
+            # Replace tags in text
+            final_text = replace_media_tags(assistant_text, media_replacements)
+
+            # Save assistant message
+            # Find first media url if any, for media_url field
+            first_media = next(((mt, url) for mt, url in media_replacements if url), None)
+            assistant_msg = Message(
+                chat_id=chat.id,
+                role="assistant",
+                content=final_text,
+                media_url=first_media[1] if first_media else None,
+                media_type=first_media[0] if first_media else None,
+            )
+            db.add(assistant_msg)
+            await db.commit()
+            await db.refresh(assistant_msg)
+
+            await websocket.send_json({
+                "type": "assistant_message",
+                "id": str(assistant_msg.id),
+                "content": final_text,
+                "media_url": assistant_msg.media_url,
+                "media_type": assistant_msg.media_type,
+                "created_at": assistant_msg.created_at.isoformat() if assistant_msg.created_at else None,
+            })
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
+    finally:
+        await db.close()

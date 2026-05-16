@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Backend
+backend/.venv/
+backend/alembic/versions/__pycache__/
+backend/app/**/__pycache__/
+
+# Frontend
+frontend-web/node_modules/
+frontend-web/dist/
+frontend-web/.vite/
+
+# Environment
+.env
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ComfyUI
+comfyui/input/*
+comfyui/output/*
+comfyui/models/*
