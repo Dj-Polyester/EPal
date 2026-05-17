@@ -28,24 +28,23 @@ RUN wget -qO /tmp/python.tar.gz \
     ln -sf /usr/local/python/bin/pip3 /usr/local/bin/pip3 && \
     ln -sf /usr/local/python/bin/pip3 /usr/local/bin/pip
 
-# Clone ComfyUI
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/ComfyUI
-WORKDIR /app/ComfyUI
-
-# Install ComfyUI dependencies with uv into the system Python
-RUN uv pip install --system -r requirements.txt
-
-# Install ComfyScript as a custom node for workflow execution support
-RUN mkdir -p custom_nodes && \
-    git clone https://github.com/Chaoses-Ib/ComfyScript.git custom_nodes/ComfyScript && \
-    cd custom_nodes/ComfyScript && \
-    uv pip install --system -e ".[default]"
-
-# Create model directories
-RUN mkdir -p models/checkpoints models/vae models/loras models/embeddings models/controlnet models/clip models/clip_vision
+# ComfyUI is mounted from the host at runtime.
+# The startup script installs requirements from the mounted ComfyUI.
 
 ENV PYTHONPATH=/app/ComfyUI
+ENV COMFYUI_PATH=/app/ComfyUI
+
+# Create model directories as fallbacks (host mount will overlay these)
+RUN mkdir -p /app/ComfyUI/models/checkpoints /app/ComfyUI/models/vae \
+    /app/ComfyUI/models/loras /app/ComfyUI/models/embeddings \
+    /app/ComfyUI/models/controlnet /app/ComfyUI/models/clip \
+    /app/ComfyUI/models/clip_vision /app/ComfyUI/output \
+    /app/ComfyUI/input /app/ComfyUI/workflows
+
+# Copy startup script
+COPY start-docker.sh /app/start-docker.sh
+RUN chmod +x /app/start-docker.sh
 
 EXPOSE 8188
 
-CMD ["python", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
+CMD ["/app/start-docker.sh"]

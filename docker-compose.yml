@@ -42,8 +42,11 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - vllm_models:/root/.cache/huggingface
+      - ./vllm/models:/models
     command:
       - "--model"
+      - "${VLLM_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}"
+      - "--served-model-name"
       - "${VLLM_MODEL:-Qwen/Qwen2.5-1.5B-Instruct}"
       - "--host"
       - "0.0.0.0"
@@ -53,6 +56,8 @@ services:
       - "${VLLM_TENSOR_PARALLEL:-1}"
       - "--max-model-len"
       - "${VLLM_MAX_MODEL_LEN:-8192}"
+      - "--gpu-memory-utilization"
+      - "${VLLM_GPU_MEMORY_UTILIZATION:-0.25}"
     ports:
       - "${VLLM_PORT:-8001}:8000"
     healthcheck:
@@ -71,10 +76,9 @@ services:
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+      - COMFYUI_PATH=/app/ComfyUI
     volumes:
-      - ./comfyui/models:/app/ComfyUI/models
-      - ./comfyui/output:/app/ComfyUI/output
-      - ./comfyui/input:/app/ComfyUI/input
+      - ${COMFYUI_PATH:-$HOME/comfy/ComfyUI}:/app/ComfyUI
     ports:
       - "${COMFYUI_PORT:-8188}:8188"
     healthcheck:

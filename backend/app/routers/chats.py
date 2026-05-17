@@ -16,6 +16,7 @@ class ChatOut(BaseModel):
     character_id: uuid.UUID
     character_name: str
     character_avatar_url: str | None
+    character_personality: str | None
     updated_at: str | None
 
     class Config:
@@ -53,9 +54,34 @@ async def list_chats(
             "character_id": c.character_id,
             "character_name": c.character.name,
             "character_avatar_url": c.character.avatar_url,
+            "character_personality": c.character.personality_prompt,
             "updated_at": c.updated_at.isoformat() if c.updated_at else None,
         })
     return out
+
+
+@router.get("/{chat_id}", response_model=ChatOut)
+async def get_chat(
+    chat_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Chat)
+        .where(and_(Chat.id == chat_id, Chat.user_id == current_user.id))
+        .options(selectinload(Chat.character))
+    )
+    chat = result.scalar_one_or_none()
+    if not chat:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+    return {
+        "id": chat.id,
+        "character_id": chat.character_id,
+        "character_name": chat.character.name,
+        "character_avatar_url": chat.character.avatar_url,
+        "character_personality": chat.character.personality_prompt,
+        "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
+    }
 
 
 @router.get("/{chat_id}/messages", response_model=list[MessageOut])

@@ -1,170 +1,230 @@
 {
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/main.py": {
-    "mtime": 1778781751.1582024,
-    "hash": "d7b11135315ade7cfe46348c18cd3d9f"
+  "/home/polyester/Desktop/Projects/misc/EPal/start_frontend.ps1": {
+    "mtime": 1778924746.9949412,
+    "hash": "eca8c78bd60861b0d90f716d011f6c34"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/db.py": {
-    "mtime": 1778781408.8099318,
+  "/home/polyester/Desktop/Projects/misc/EPal/serve_llm.ps1": {
+    "mtime": 1778924746.9975848,
+    "hash": "749c0c2fd961087132df123ff398f17b"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/start_comfyui.ps1": {
+    "mtime": 1778924746.9976296,
+    "hash": "89dcf034293b6aa9919121be7a6b5ae8"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/start_backend.ps1": {
+    "mtime": 1778924746.9978347,
+    "hash": "e51110411a6a6166f7512e4e41bf614d"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/main.py": {
+    "mtime": 1778924746.9950376,
+    "hash": "b6b90dee4131b45b5e2f30eba07557a4"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/db.py": {
+    "mtime": 1778924746.9950743,
     "hash": "62d7de873eed23afab209c78ff17094a"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/config.py": {
-    "mtime": 1778781406.6099362,
-    "hash": "0f127d516f96c03accd1453acf29a260"
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/config.py": {
+    "mtime": 1778924746.9952986,
+    "hash": "55e37d66010c292ab5d3dcb436d1faf9"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/dependencies.py": {
-    "mtime": 1778781472.866798,
-    "hash": "af580804a5c1b8a7f76462056448053e"
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/dependencies.py": {
+    "mtime": 1778924746.9953377,
+    "hash": "c988b27f2e1bfc67dbd2e3f7a7e8714f"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/__init__.py": {
-    "mtime": 1778782090.9524539,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/__init__.py": {
+    "mtime": 1778924746.9958098,
     "hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/comfy_service.py": {
-    "mtime": 1778782476.143073,
-    "hash": "f306553456101fad04e3bfa618283e73"
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/services/comfy_service.py": {
+    "mtime": 1778924746.995123,
+    "hash": "96fcf866a92b29e6cf95567d058ec8a3"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/memory_service.py": {
-    "mtime": 1778782647.6559699,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/services/memory_service.py": {
+    "mtime": 1778924746.9951942,
     "hash": "ea07b44aba57932788e9cf94f8b3fd62"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/vllm_service.py": {
-    "mtime": 1778781635.6674519,
-    "hash": "95fee45f3b05d76839313d68dc3c3c10"
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/services/vllm_service.py": {
+    "mtime": 1778924746.995233,
+    "hash": "ea7d1fb51a9a5ee4d3ce095816843e26"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/services/__init__.py": {
-    "mtime": 1778782090.9524539,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/services/__init__.py": {
+    "mtime": 1778924746.9952657,
     "hash": "40fb7ca82dcaef2acfb7eee6bb2f0bae"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/media.py": {
-    "mtime": 1778781446.4558532,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/models/media.py": {
+    "mtime": 1778924746.995374,
     "hash": "00d98e6ff44d6aebadd0fa8d88d59dca"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/character.py": {
-    "mtime": 1778781415.7739172,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/models/character.py": {
+    "mtime": 1778924746.9954123,
     "hash": "acce3bf8ec570e48f88a68c9e74d6a43"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/chat.py": {
-    "mtime": 1778781418.5499115,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/models/chat.py": {
+    "mtime": 1778924746.995451,
     "hash": "86a8a341239dbc644bb4a754ac17de20"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/message.py": {
-    "mtime": 1778781425.8108964,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/models/message.py": {
+    "mtime": 1778924746.9954855,
     "hash": "e7917646156897bf3c397e8754d8bc41"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/__init__.py": {
-    "mtime": 1778782090.9524539,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/models/__init__.py": {
+    "mtime": 1778924746.9955199,
     "hash": "4369787ca3adbb29cc172fa58b3a6726"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/models/user.py": {
-    "mtime": 1778781411.7119257,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/models/user.py": {
+    "mtime": 1778924746.9955542,
     "hash": "c04c4cdffe50cbd6d88c692eaea79ba1"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/chats.py": {
-    "mtime": 1778782608.6817942,
-    "hash": "bd10ba71b0227d5777e2d60c2d212514"
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/routers/chats.py": {
+    "mtime": 1778924746.9955964,
+    "hash": "d2c66817d0d6cb922b064b1943cd51f5"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/characters.py": {
-    "mtime": 1778781553.294628,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/routers/characters.py": {
+    "mtime": 1778924746.9956367,
     "hash": "d36bcb6e6ce37e07eef02d2416ed3090"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/auth.py": {
-    "mtime": 1778781504.9857304,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/routers/auth.py": {
+    "mtime": 1778924746.995687,
     "hash": "baeed2cb24728b0ec5bbc6a74c84cba6"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/users.py": {
-    "mtime": 1778781511.215717,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/routers/users.py": {
+    "mtime": 1778924746.9957218,
     "hash": "79e738a134865beb4ee303a7123d2a24"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/routers/__init__.py": {
-    "mtime": 1778782090.9524539,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/routers/__init__.py": {
+    "mtime": 1778924746.9957604,
     "hash": "d7f90a4b85918e70bf66ae81eea87187"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/websocket/chat_ws.py": {
-    "mtime": 1778782373.9363613,
-    "hash": "f16ef0d0e3744233cc055e481061f794"
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/websocket/chat_ws.py": {
+    "mtime": 1778924746.9958098,
+    "hash": "0e0520b52a0cf367a7f7d984abc3894e"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/app/websocket/__init__.py": {
-    "mtime": 1778782090.9524539,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/app/websocket/__init__.py": {
+    "mtime": 1778924746.9958098,
     "hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/alembic/env.py": {
-    "mtime": 1778782349.1151643,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/alembic/env.py": {
+    "mtime": 1778924746.996101,
     "hash": "c8fea08b77bb9adfecf25ed7566e218d"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/backend/alembic/versions/001_initial.py": {
-    "mtime": 1778781807.5230794,
+  "/home/polyester/Desktop/Projects/misc/EPal/backend/alembic/versions/001_initial.py": {
+    "mtime": 1778924746.996056,
     "hash": "c4afd99fa758e8094b9d34960baf02b3"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/postcss.config.js": {
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/postcss.config.js": {
     "mtime": 1778782001.2726529,
     "hash": "ef3ba2a81ba19f8ea5ddf625521e96f0"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/tailwind.config.js": {
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/tailwind.config.js": {
     "mtime": 1778782000.5926545,
     "hash": "3346df3fd0a1ea3f84440703bf8fd2cb"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/vite.config.ts": {
-    "mtime": 1778781826.5440378,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/vite.config.ts": {
+    "mtime": 1778924746.997531,
     "hash": "22957e138dfe871ce0f5087d54bdcebf"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/vite-env.d.ts": {
-    "mtime": 1778782581.9766648,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/vite-env.d.ts": {
+    "mtime": 1778924746.9963732,
     "hash": "0352474ba2918efe13895edbc3780d94"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/App.tsx": {
-    "mtime": 1778781999.6876564,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/App.tsx": {
+    "mtime": 1778924746.9968166,
     "hash": "2966231348965d2a13c6218c289acadb"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/main.tsx": {
-    "mtime": 1778781840.2760077,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/main.tsx": {
+    "mtime": 1778924746.996857,
     "hash": "42c0b1d9c2751a5e4e55876cee46fc57"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/contexts/AuthContext.tsx": {
-    "mtime": 1778782559.3585494,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/contexts/AuthContext.tsx": {
+    "mtime": 1778924746.996338,
     "hash": "6701921b01b632177429e2669129922d"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/CharacterCreate/CharacterCreate.tsx": {
-    "mtime": 1778781941.7517846,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/components/CharacterCreate/CharacterCreate.tsx": {
+    "mtime": 1778924746.9964185,
     "hash": "9fe6f878a4dbe20a42ca209b6eb7490d"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Auth/Register.tsx": {
-    "mtime": 1778781888.1999025,
-    "hash": "25cb2760b22c00e8baa4b4d64da57bad"
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/components/Auth/Register.tsx": {
+    "mtime": 1778924746.996462,
+    "hash": "a3e174a9d0fba7969abf2efd6dae4c18"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Auth/Login.tsx": {
-    "mtime": 1778781872.4589372,
-    "hash": "cde6824d1d5af40895460ee5d23d20cb"
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/components/Auth/Login.tsx": {
+    "mtime": 1778924746.9965134,
+    "hash": "2fecaf5d81d78b7961d4ffafa8560d0d"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Chat/ChatRoom.tsx": {
-    "mtime": 1778782346.8451457,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/components/Chat/ChatRoom.tsx": {
+    "mtime": 1778924746.996579,
     "hash": "e81510f8771f0f0c660578250abd227f"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Onboarding/WelcomeScreen.tsx": {
-    "mtime": 1778782558.1175427,
-    "hash": "021b77b950a05450f42e0319a01bdec2"
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/components/Onboarding/WelcomeScreen.tsx": {
+    "mtime": 1778924746.9966533,
+    "hash": "eef9c7d57f7dca56f06527b0653074e9"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/components/Dashboard/Dashboard.tsx": {
-    "mtime": 1778782543.676466,
-    "hash": "f172a4833170d6fb2dd430466b4b723d"
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/components/Dashboard/Dashboard.tsx": {
+    "mtime": 1778924746.996715,
+    "hash": "516ced599b14f953cdf38f1d1f945eaa"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/src/api/client.ts": {
-    "mtime": 1778782542.6124601,
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/src/api/client.ts": {
+    "mtime": 1778924746.9967682,
     "hash": "c8b4d9bb37cd80cb89fa65244e43e2dd"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/docker-compose.yml": {
-    "mtime": 1778782226.5520282,
-    "hash": "2df8e5fa950252565f547270bc5a12c4"
+  "/home/polyester/Desktop/Projects/misc/EPal/docker-compose.yml": {
+    "mtime": 1778924752.919649,
+    "hash": "4261c943e50ab4b0a0bdb01bbf4b6f99"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/task.txt": {
-    "mtime": 1778780836.3480406,
-    "hash": "20fd9dce10c1afa9e82ecd807fc4a2b8"
+  "/home/polyester/Desktop/Projects/misc/EPal/task.txt": {
+    "mtime": 1778924746.9977446,
+    "hash": "e0ad6c095572f2cf93ab473382b19470"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/README.md": {
-    "mtime": 1778782027.1605954,
-    "hash": "e4508596f6f208fa964001f4d4ee864c"
+  "/home/polyester/Desktop/Projects/misc/EPal/README.md": {
+    "mtime": 1778924746.9979706,
+    "hash": "e99fe0945beaf6985ddd891b4a5c9f56"
   },
-  "/home/polyester/Desktop/Projects/misc/VirtualFriend/frontend-web/index.html": {
-    "mtime": 1778781838.0540125,
-    "hash": "18f9184d5efb43b21dcdd227a9b4590d"
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v2-inpainting-inference.yaml": {
+    "mtime": 1778182521.4557905,
+    "hash": "ecd220bfd5cd58eb3d063baf7c99c5c7"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v1-inference_clip_skip_2.yaml": {
+    "mtime": 1778182521.4556901,
+    "hash": "9077fc69b5da7bc5de4ad1d886845318"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v1-inference_fp16.yaml": {
+    "mtime": 1778182521.4557183,
+    "hash": "b01525eff8f886f707d9f55f2c1478dd"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v2-inference.yaml": {
+    "mtime": 1778182521.455772,
+    "hash": "fe5f95604cf0a0590677dc6786ab3f54"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/anything_v3.yaml": {
+    "mtime": 1778182521.4555883,
+    "hash": "9077fc69b5da7bc5de4ad1d886845318"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v2-inference_fp32.yaml": {
+    "mtime": 1778182521.4557805,
+    "hash": "8b7d867b340697a532faeee0baf87797"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v1-inference.yaml": {
+    "mtime": 1778182521.4556751,
+    "hash": "25984b666c836fc873192cd3a7f10bd4"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v2-inference-v.yaml": {
+    "mtime": 1778182521.4557307,
+    "hash": "6110602b524327ad6f0b68d883e4e2cd"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v1-inference_clip_skip_2_fp16.yaml": {
+    "mtime": 1778182521.4557028,
+    "hash": "d13746a5887d2c556ce220cba30971f8"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v2-inference-v_fp32.yaml": {
+    "mtime": 1778182521.4557538,
+    "hash": "9437ef12c484c78f420a054a488a1a42"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/comfyui/models/configs/v1-inpainting-inference.yaml": {
+    "mtime": 1778182521.4557307,
+    "hash": "1ef0b03f507eec6ef080b106ec7b243c"
+  },
+  "/home/polyester/Desktop/Projects/misc/EPal/frontend-web/index.html": {
+    "mtime": 1778924746.9969366,
+    "hash": "86d6159f57b2ed3372a2fa8e376c2164"
   }
 }

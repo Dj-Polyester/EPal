@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Switch to the script's directory regardless of where it was invoked from
+cd "$(dirname "$0")"
+
 # ---------------------------------------------------------------------------
 # EPal — ComfyUI Server Launch Script (Linux/macOS)
 # ---------------------------------------------------------------------------

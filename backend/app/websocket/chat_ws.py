@@ -9,7 +9,7 @@ from app.dependencies import get_current_user_ws
 from app.models import Chat, Message, Character, User, Media
 from app.services.memory_service import build_chat_context, extract_media_requests, replace_media_tags
 from app.services.vllm_service import chat_completion
-from app.services.comfy_service import generate_media
+from app.services.comfy_service import generate_media, _generate_media_image_prompt
 
 
 async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
@@ -96,9 +96,12 @@ async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
             media_replacements: list[tuple[str, str | None]] = []
 
             for media_type, description in media_requests:
+                # Generate a refined image prompt using vLLM with the full chat context
+                image_prompt = await _generate_media_image_prompt(context, description)
+
                 media_url = await generate_media(
                     media_type,
-                    description,
+                    image_prompt,
                     source_image_url=character.avatar_url,
                 )
                 media_replacements.append((media_type, media_url))
@@ -108,7 +111,7 @@ async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
                     media_record = Media(
                         chat_id=chat.id,
                         media_type=media_type,
-                        prompt=description,
+                        prompt=image_prompt,
                         url=media_url,
                         status="completed",
                     )

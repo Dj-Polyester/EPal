@@ -1,6 +1,11 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
 from functools import lru_cache
+
+
+# Locate workspace root .env (two levels up from backend/app/config.py)
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -13,7 +18,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = ConfigDict(
+        env_file=str(_ENV_FILE) if _ENV_FILE.exists() else ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 @lru_cache

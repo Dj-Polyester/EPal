@@ -1,4 +1,4 @@
-from app.models.user import User
+from app.models.user import User, UserSettings
 from app.models.character import Character
 from app.models.chat import Chat
 from app.models.message import Message

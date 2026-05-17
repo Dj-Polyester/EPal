@@ -3,43 +3,119 @@ import aiohttp
 import shutil
 import os
 import urllib.parse
+import json
+import random
+from pathlib import Path
 from app.config import get_settings
 from app.services.vllm_service import chat_completion
 
 _settings = get_settings()
 _COMFY_URL = _settings.COMFYUI_URL
 
-# ---------------------------------------------------------------------------
-# Workflow templates (ComfyUI API format)
-# ---------------------------------------------------------------------------
+CHARGEN_WORKFLOW_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent / "comfyui" / "workflows" / "flux2_chargen.json"
+)
+CHAREDIT_WORKFLOW_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent / "comfyui" / "workflows" / "flux2_charedit.json"
+)
 
-_CHARGEN_WORKFLOW = {
-    "14": {"inputs": {"unet_name": "z_image_turbo_nvfp4.safetensors", "weight_dtype": "default"}, "class_type": "UNETLoader"},
-    "15": {"inputs": {"clip_name": "qwen_3_4b_fp4_mixed.safetensors", "type": "lumina2", "device": "default"}, "class_type": "CLIPLoader"},
-    "8": {"inputs": {"vae_name": "ae.safetensors"}, "class_type": "VAELoader"},
-    "9": {"inputs": {"model": ["14", 0], "shift": 3}, "class_type": "ModelSamplingAuraFlow"},
-    "13": {"inputs": {"width": 1088, "height": 1920, "batch_size": 1}, "class_type": "EmptySD3LatentImage"},
-    "11": {"inputs": {"text": "{prompt}", "clip": ["15", 0]}, "class_type": "CLIPTextEncode"},
-    "12": {"inputs": {"text": "blurry ugly bad", "clip": ["15", 0]}, "class_type": "CLIPTextEncode"},
-    "10": {"inputs": {"model": ["9", 0], "seed": 52980332419998, "steps": 9, "cfg": 1, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0, "positive": ["11", 0], "negative": ["12", 0], "latent_image": ["13", 0]}, "class_type": "KSampler"},
-    "5": {"inputs": {"samples": ["10", 0], "vae": ["8", 0]}, "class_type": "VAEDecode"},
-    "6": {"inputs": {"filename_prefix": "avatar", "images": ["5", 0]}, "class_type": "SaveImage"},
+# Node types that have hidden widgets not reflected in the inputs list.
+# Maps node type -> ordered list of ALL widget names (including hidden ones)
+# so we can index widgets_values correctly.
+_NODE_WIDGET_NAMES = {
+    "KSampler": ["seed", "control_after_generate", "steps", "cfg", "sampler_name", "scheduler", "denoise"],
+    "UnetLoaderGGUF": ["unet_name", "weight_dtype"],
+    "CLIPLoaderGGUF": ["clip_name", "type", "device"],
+    "VAELoader": ["vae_name"],
+    "CLIPTextEncode": ["text"],
+    "EmptyFlux2LatentImage": ["width", "height", "batch_size"],
+    "EmptySD3LatentImage": ["width", "height", "batch_size"],
+    "SaveImage": ["filename_prefix"],
+    "LoadImage": ["image", "upload"],
+    "VAEDecode": [],
+    # custom node with no widgets
+    "f23a0cc7-4042-4914-9828-d09ab4e8b07f": [],
 }
 
-_CHAREDIT_WORKFLOW = {
-    "9": {"inputs": {"unet_name": "qwen_image_edit_2511_fp8mixed.safetensors", "weight_dtype": "default"}, "class_type": "UNETLoader"},
-    "4": {"inputs": {"clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors", "type": "qwen_image", "device": "default"}, "class_type": "CLIPLoader"},
-    "7": {"inputs": {"vae_name": "qwen_image_vae.safetensors"}, "class_type": "VAELoader"},
-    "1": {"inputs": {"model": ["9", 0], "shift": 3.1}, "class_type": "ModelSamplingAuraFlow"},
-    "5": {"inputs": {"width": 1024, "height": 1024, "batch_size": 1}, "class_type": "EmptySD3LatentImage"},
-    "11": {"inputs": {"image": "{image_filename}", "upload": "image"}, "class_type": "LoadImage"},
-    "12": {"inputs": {"text": "{prompt}", "clip": ["4", 0], "vae": ["7", 0], "image1": ["11", 0]}, "class_type": "TextEncodeQwenImageEditPlus"},
-    "6": {"inputs": {"text": "blurry ugly bad", "clip": ["4", 0], "vae": ["7", 0], "image1": ["11", 0]}, "class_type": "TextEncodeQwenImageEditPlus"},
-    "8": {"inputs": {"model": ["1", 0], "seed": 589836055062098, "steps": 20, "cfg": 4, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0, "positive": ["12", 0], "negative": ["6", 0], "latent_image": ["5", 0]}, "class_type": "KSampler"},
-    "10": {"inputs": {"model": ["8", 0]}, "class_type": "CFGNorm"},
-    "2": {"inputs": {"samples": ["10", 0], "vae": ["7", 0]}, "class_type": "VAEDecode"},
-    "3": {"inputs": {"filename_prefix": "media", "images": ["2", 0]}, "class_type": "SaveImage"},
-}
+
+OLLAMA_NODE_TYPES = {"OllamaConnectivityV2", "OllamaGenerateV2", "OllamaConnectivity", "OllamaGenerate", "PreviewAny"}
+
+
+def _get_widget_value(node: dict, input_name: str):
+    """Extract the correct widgets_values entry for a widget input, accounting for hidden widgets."""
+    node_type = node.get("type", "")
+    widgets_values = node.get("widgets_values", [])
+
+    widget_names = _NODE_WIDGET_NAMES.get(node_type)
+    if widget_names:
+        try:
+            idx = widget_names.index(input_name)
+            if idx < len(widgets_values):
+                return widgets_values[idx]
+        except ValueError:
+            pass
+
+    # Fallback: count widget inputs seen so far in the inputs list
+    widget_inputs = [inp for inp in node.get("inputs", []) if "widget" in inp]
+    for i, inp in enumerate(widget_inputs):
+        if inp["name"] == input_name and i < len(widgets_values):
+            return widgets_values[i]
+
+    return None
+
+
+def _workflow_to_prompt(workflow_data: dict, *, remove_ollama: bool = False) -> dict:
+    """Convert a ComfyUI workflow export (nodes/links format) to prompt API format."""
+    nodes = {n["id"]: n for n in workflow_data.get("nodes", [])}
+    links_by_id = {link[0]: link for link in workflow_data.get("links", [])}
+
+    prompt = {}
+    removed_ids = set()
+
+    if remove_ollama:
+        for nid, node in nodes.items():
+            if node.get("type") in OLLAMA_NODE_TYPES:
+                removed_ids.add(nid)
+
+    for nid, node in nodes.items():
+        if nid in removed_ids:
+            continue
+
+        class_type = node.get("type", "")
+        inputs = {}
+
+        for inp in node.get("inputs", []):
+            input_name = inp["name"]
+            link_id = inp.get("link")
+
+            if link_id is not None:
+                link = links_by_id.get(link_id)
+                if link is not None:
+                    origin_node = link[1]
+                    if origin_node in removed_ids:
+                        # Connection to removed Ollama node -> set placeholder
+                        inputs[input_name] = ""
+                        continue
+                    origin_slot = link[2]
+                    inputs[input_name] = [str(origin_node), origin_slot]
+            elif "widget" in inp:
+                value = _get_widget_value(node, input_name)
+                if value is not None:
+                    inputs[input_name] = value
+
+        prompt[str(nid)] = {
+            "inputs": inputs,
+            "class_type": class_type,
+        }
+
+    return prompt
+
+
+async def _load_workflow_prompt(workflow_path: Path, *, remove_ollama: bool = False) -> dict:
+    """Load a ComfyUI workflow JSON and convert it to prompt API format."""
+    text = await asyncio.to_thread(workflow_path.read_text)
+    workflow_data = json.loads(text)
+    return _workflow_to_prompt(workflow_data, remove_ollama=remove_ollama)
 
 
 # ---------------------------------------------------------------------------
@@ -78,27 +154,6 @@ async def _run_workflow_http(workflow: dict, prefix: str, timeout: int = 180) ->
         except Exception as e:
             print(f"[ComfyUI] workflow error: {e}")
             return None
-
-
-async def _generate_image_prompt(name: str, personality: str) -> str:
-    """Use vLLM to turn character info into a detailed image-generation prompt."""
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are an expert prompt engineer for AI image generation. "
-                "Create a single, highly detailed, vivid image prompt based on the character description. "
-                "Include subject, appearance, clothing, expression, background, lighting, and artistic style. "
-                "Return ONLY the image prompt text—no extra commentary, no quotes around it."
-            ),
-        },
-        {
-            "role": "user",
-            "content": f"Character name: {name}\nPersonality / traits: {personality}",
-        },
-    ]
-    prompt = await chat_completion(messages, max_tokens=256, temperature=0.7)
-    return prompt.strip().strip('"').strip("'")
 
 
 async def _ensure_image_in_input(image_url: str) -> str | None:
@@ -142,29 +197,80 @@ async def _ensure_image_in_input(image_url: str) -> str | None:
     return None
 
 
+async def _generate_media_image_prompt(chat_context: list[dict], description: str) -> str:
+    """Use vLLM to generate a detailed image-generation prompt based on chat context."""
+    context_parts = []
+    for msg in chat_context:
+        if msg["role"] == "system":
+            context_parts.append(msg["content"])
+        elif msg["role"] in ("user", "assistant"):
+            context_parts.append(f"{msg['role'].capitalize()}: {msg['content']}")
+
+    context_text = "\n".join(context_parts)
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an expert prompt engineer for AI image generation. "
+                "Given the conversation context and a media request, create a single, highly detailed, vivid image prompt. "
+                "Include subject, appearance, clothing, expression, background, lighting, and artistic style. "
+                "Return ONLY the image prompt text—no extra commentary, no quotes around it."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"Conversation context:\n{context_text}\n\nMedia request: {description}\n\nGenerate the image prompt:",
+        },
+    ]
+    prompt = await chat_completion(messages, max_tokens=256, temperature=0.7)
+    return prompt.strip().strip('"').strip("'")
+
+
+def _inject_prompt_into_workflow(workflow: dict, prompt: str) -> None:
+    """Inject a text prompt into the first CLIPTextEncode node that isn't the negative prompt."""
+    for node in workflow.values():
+        if node.get("class_type") == "CLIPTextEncode":
+            inputs = node.get("inputs", {})
+            if inputs.get("text") != "blurry ugly bad":
+                inputs["text"] = prompt
+                break
+
+
+def _randomize_ksampler_seed(workflow: dict) -> None:
+    """Randomize the seed in the first KSampler node."""
+    for node in workflow.values():
+        if node.get("class_type") == "KSampler":
+            node["inputs"]["seed"] = random.randint(1, 2**32)
+            break
+
+
+def _set_filename_prefix(workflow: dict, prefix: str) -> None:
+    """Set the filename prefix in the first SaveImage node."""
+    for node in workflow.values():
+        if node.get("class_type") == "SaveImage":
+            node["inputs"]["filename_prefix"] = prefix
+            break
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-async def generate_avatar(name: str, personality: str) -> str | None:
-    """Generate a character avatar using the chargen workflow + vLLM prompt."""
-    prompt = await _generate_image_prompt(name, personality)
-    if not prompt:
-        return None
+async def generate_avatar(personality_prompt: str) -> str | None:
+    """Generate a character avatar using the chargen workflow with the user's personality prompt."""
+    workflow = await _load_workflow_prompt(CHARGEN_WORKFLOW_PATH, remove_ollama=True)
 
-    workflow = {k: v.copy() for k, v in _CHARGEN_WORKFLOW.items()}
-    workflow["11"]["inputs"]["text"] = prompt
-
-    # Randomise seed so each avatar is unique
-    import random
-    workflow["10"]["inputs"]["seed"] = random.randint(1, 2**32)
+    _inject_prompt_into_workflow(workflow, personality_prompt)
+    _randomize_ksampler_seed(workflow)
+    _set_filename_prefix(workflow, "avatar")
 
     return await _run_workflow_http(workflow, "avatar")
 
 
 async def generate_media(
     media_type: str,
-    description: str,
+    prompt: str,
     source_image_url: str | None = None,
 ) -> str | None:
     """Generate media.
@@ -183,22 +289,25 @@ async def generate_media(
         if not image_filename:
             return None
 
-        workflow = {k: v.copy() for k, v in _CHAREDIT_WORKFLOW.items()}
-        workflow["11"]["inputs"]["image"] = image_filename
-        workflow["12"]["inputs"]["text"] = description
+        workflow = await _load_workflow_prompt(CHAREDIT_WORKFLOW_PATH)
 
-        # Randomise seed
-        import random
-        workflow["8"]["inputs"]["seed"] = random.randint(1, 2**32)
+        # Inject source image
+        for node in workflow.values():
+            if node.get("class_type") == "LoadImage":
+                node["inputs"]["image"] = image_filename
+                break
+
+        _inject_prompt_into_workflow(workflow, prompt)
+        _randomize_ksampler_seed(workflow)
+        _set_filename_prefix(workflow, "media")
 
         return await _run_workflow_http(workflow, "media")
 
     # --- chargen: generic image from scratch ---
-    workflow = {k: v.copy() for k, v in _CHARGEN_WORKFLOW.items()}
-    workflow["11"]["inputs"]["text"] = description
-    workflow["6"]["inputs"]["filename_prefix"] = "media"
+    workflow = await _load_workflow_prompt(CHARGEN_WORKFLOW_PATH, remove_ollama=True)
 
-    import random
-    workflow["10"]["inputs"]["seed"] = random.randint(1, 2**32)
+    _inject_prompt_into_workflow(workflow, prompt)
+    _randomize_ksampler_seed(workflow)
+    _set_filename_prefix(workflow, "media")
 
     return await _run_workflow_http(workflow, "media")

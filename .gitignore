@@ -16,6 +16,9 @@ backend/.venv/
 backend/alembic/versions/__pycache__/
 backend/app/**/__pycache__/
 
+# vLLM
+vllm/models/*
+
 # Frontend
 frontend-web/node_modules/
 frontend-web/dist/
@@ -39,3 +42,6 @@ Thumbs.db
 comfyui/input/*
 comfyui/output/*
 comfyui/models/*
+
+#HuggingFace
+*-info

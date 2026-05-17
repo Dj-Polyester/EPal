@@ -1,4 +1,8 @@
 #Requires -Version 7.0
+
+# Switch to the script's directory regardless of where it was invoked from
+Set-Location $PSScriptRoot
+
 # ---------------------------------------------------------------------------
 # EPal — Backend Manual Setup Script (Windows PowerShell)
 # ---------------------------------------------------------------------------
@@ -30,7 +34,15 @@ if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
 # --- Backend setup ---------------------------------------------------------
 
 Write-Host "$Green [1/4] Setting up backend...$Reset"
-Set-Location backend
+
+# Detect stale venv (e.g., moved project folder)
+if (Test-Path ".venv") {
+    $PythonExe = ".venv\Scripts\python.exe"
+    if (-not (Test-Path $PythonExe)) {
+        Write-Host "$Yellow  Stale venv detected (interpreter missing). Recreating...$Reset"
+        Remove-Item -Recurse -Force ".venv"
+    }
+}
 
 if (-not (Test-Path ".venv")) {
     Write-Host "  Creating uv venv..."
@@ -46,30 +58,37 @@ $Python     = "$Venv\Scripts\python.exe"
 $Alembic    = "$Venv\Scripts\alembic.exe"
 $Uvicorn    = "$Venv\Scripts\uvicorn.exe"
 
-# --- Environment file ------------------------------------------------------
+# --- Environment file (workspace root) ------------------------------------
 
 $EnvCreated = $false
-if (-not (Test-Path ".env")) {
-    Copy-Item ..\..\.env.manual .env
-    $EnvCreated = $true
-    Write-Host "$Yellow  Created backend/.env from .env.manual.$Reset"
+if (-not (Test-Path "..\.env")) {
+    if (Test-Path "..\.env.manual") {
+        Copy-Item ..\.env.manual ..\.env
+        $EnvCreated = $true
+        Write-Host "$Yellow  Created .env at workspace root from .env.manual.$Reset"
+    } else {
+        Write-Host "$Yellow  .env.manual not found at workspace root; skipping .env creation (Docker?).$Reset"
+    }
 } else {
-    Write-Host "  backend/.env already exists, keeping existing file."
+    Write-Host "  .env already exists at workspace root, keeping existing file."
 }
 
 # --- Generate & inject secret key ----------------------------------------
 
-$SecretKey = & $Python -c "import secrets; print(secrets.token_urlsafe(32))"
+if (Test-Path "..\.env") {
+    $SecretKey = & $Python -c "import secrets; print(secrets.token_urlsafe(32))"
 
-$EnvContent = Get-Content .env -Raw
-if ($EnvContent -match "^SECRET_KEY=.*") {
-    $EnvContent = $EnvContent -replace "^SECRET_KEY=.*", "SECRET_KEY=$SecretKey"
+    $EnvContent = Get-Content ..\.env -Raw
+    if ($EnvContent -match "^SECRET_KEY=.*") {
+        $EnvContent = $EnvContent -replace "^SECRET_KEY=.*", "SECRET_KEY=$SecretKey"
+    } else {
+        $EnvContent += "`nSECRET_KEY=$SecretKey"
+    }
+    Set-Content ..\.env $EnvContent
+    Write-Host "$Green [2/4] Generated fresh SECRET_KEY.$Reset"
 } else {
-    $EnvContent += "`nSECRET_KEY=$SecretKey"
+    Write-Host "$Yellow [2/4] No .env found; skipping SECRET_KEY injection (Docker?).$Reset"
 }
-Set-Content .env $EnvContent
-
-Write-Host "$Green [2/4] Generated fresh SECRET_KEY.$Reset"
 
 # --- Migrations ------------------------------------------------------------
 
@@ -85,8 +104,8 @@ Write-Host "Backend is starting on $Yellow http://localhost:8000 $Reset"
 Write-Host ""
 
 if ($EnvCreated) {
-    Write-Host "$Yellow Note:$Reset A new .env was created. Review it if needed:"
-    Write-Host "  Get-Content backend/.env"
+    Write-Host "$Yellow Note:$Reset A new .env was created at workspace root. Review it if needed:"
+    Write-Host "  Get-Content .\.env"
     Write-Host ""
 }
 
@@ -94,10 +113,10 @@ Write-Host "$Yellow Make sure the following services are also running:$Reset"
 Write-Host "  • PostgreSQL  on port 5432"
 Write-Host "  • Redis       on port 6379"
 Write-Host "  • vLLM        on port 8001  (.\serve_llm.ps1)"
-Write-Host "  • ComfyUI     on port 8188  (.\start_comfyui.ps1)"
+Write-Host "  • ComfyUI     on port 8188  (..\comfyui\start.ps1)"
 Write-Host ""
 Write-Host "$Yellow Then start the frontend:$Reset"
-Write-Host "  .\start_frontend.ps1"
+Write-Host "  ..\frontend-web\start.ps1"
 Write-Host ""
 Write-Host "$Blue========================================$Reset"
 Write-Host ""

@@ -49,27 +49,27 @@ export default function CharacterCreate() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-lg mt-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="max-w-xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg mt-8">
         <div className="flex items-center gap-2 mb-6">
           <Sparkles className="w-6 h-6 text-indigo-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Create a Character</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create a Character</h1>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Character Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Character Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Zephyr the Wizard"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-4 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
               required
             />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Personality & Traits</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Personality & Traits</label>
               <button
                 type="button"
                 onClick={handleRandomize}
@@ -84,7 +84,7 @@ export default function CharacterCreate() {
               value={personality}
               onChange={(e) => setPersonality(e.target.value)}
               placeholder="Describe their personality, speaking style, background, and quirks..."
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none h-40 resize-none"
+              className="w-full px-4 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none h-40 resize-none"
               required
             />
           </div>

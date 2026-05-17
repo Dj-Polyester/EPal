@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
-import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import CharacterDetailModal from '../CharacterDetailModal';
+import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -13,29 +14,38 @@ interface Message {
   created_at: string;
 }
 
+interface ChatInfo {
+  id: string;
+  character_id: string;
+  character_name: string;
+  character_avatar_url: string | null;
+  character_personality: string | null;
+}
+
 export default function ChatRoom() {
   const { chatId } = useParams<{ chatId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [chatInfo, setChatInfo] = useState<ChatInfo | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
   const [wsError, setWsError] = useState('');
+  const [detailOpen, setDetailOpen] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Fetch history
+  // Fetch chat info and messages
   useEffect(() => {
     if (!chatId) return;
-    client
-      .get(`/chats/${chatId}/messages`)
-      .then((res) => {
-        setMessages(res.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    Promise.all([
+      client.get(`/chats/${chatId}`).then((res) => setChatInfo(res.data)),
+      client.get(`/chats/${chatId}/messages`).then((res) => setMessages(res.data)),
+    ])
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [chatId]);
 
   // WebSocket
@@ -99,7 +109,6 @@ export default function ChatRoom() {
   };
 
   const renderContent = (content: string, mediaUrl: string | null, mediaType: string | null) => {
-    // Check if content has embedded media references like [Here is the image: url]
     const parts = content.split(/(\[Here is the [^\]]+\])/g);
     return (
       <div className="space-y-2">
@@ -123,7 +132,6 @@ export default function ChatRoom() {
             );
           }
           if (part.startsWith('[') && part.endsWith(']')) {
-            // Unfulfilled media request message
             return (
               <p key={i} className="text-sm text-gray-500 italic">
                 {part}
@@ -149,44 +157,90 @@ export default function ChatRoom() {
     );
   };
 
+  const avatarUrl = chatInfo?.character_avatar_url;
+  const charName = chatInfo?.character_name || 'Chat';
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b px-4 py-3 flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      {/* WhatsApp-style header */}
+      <header className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-2.5 flex items-center gap-3">
         <button
           onClick={() => navigate('/')}
-          className="p-2 text-gray-500 hover:text-gray-700 transition"
+          className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="font-semibold text-gray-900">Chat</h1>
+
+        <button
+          onClick={() => setDetailOpen(true)}
+          className="flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg px-2 py-1 transition -ml-1"
+        >
+          <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 overflow-hidden shrink-0">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={charName} className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-5 h-5" />
+            )}
+          </div>
+          <div className="text-left">
+            <h1 className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-tight">{charName}</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {typing ? 'typing...' : 'online'}
+            </p>
+          </div>
+        </button>
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {loading ? (
-          <div className="text-center text-gray-500 py-12">Loading messages...</div>
+          <div className="text-center text-gray-500 dark:text-gray-400 py-12">Loading messages...</div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">No messages yet. Say hello!</div>
+          <div className="text-center text-gray-400 dark:text-gray-500 py-12">No messages yet. Say hello!</div>
         ) : (
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}
             >
+              {/* Character avatar on assistant messages */}
+              {msg.role === 'assistant' && (
+                <button
+                  onClick={() => setDetailOpen(true)}
+                  className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 overflow-hidden shrink-0 self-end mb-1"
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={charName} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-4 h-4" />
+                  )}
+                </button>
+              )}
+
               <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
+                className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
                   msg.role === 'user'
                     ? 'bg-indigo-600 text-white rounded-br-md'
-                    : 'bg-white text-gray-800 border rounded-bl-md shadow-sm'
+                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border dark:border-gray-700 rounded-bl-md shadow-sm'
                 }`}
               >
                 {renderContent(msg.content, msg.media_url, msg.media_type)}
+                <span className="text-[10px] opacity-60 block mt-1 text-right">
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
             </div>
           ))
         )}
         {typing && (
-          <div className="flex justify-start">
-            <div className="bg-white border px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+          <div className="flex justify-start gap-2">
+            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 overflow-hidden shrink-0 self-end mb-1">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={charName} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </div>
+            <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
               <div className="flex gap-1">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
@@ -199,19 +253,19 @@ export default function ChatRoom() {
       </div>
 
       {wsError && (
-        <div className="px-4 py-2 bg-red-50 text-red-600 text-sm text-center">{wsError}</div>
+        <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm text-center">{wsError}</div>
       )}
 
       <form
         onSubmit={handleSend}
-        className="bg-white border-t px-4 py-3 flex items-center gap-3"
+        className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 px-4 py-3 flex items-center gap-3"
       >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 px-4 py-2 bg-gray-100 rounded-full focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none text-sm"
+          className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 dark:text-white rounded-full focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-gray-700 outline-none text-sm"
           disabled={sending}
         />
         <button
@@ -222,6 +276,15 @@ export default function ChatRoom() {
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>
       </form>
+
+      {/* Character detail modal */}
+      <CharacterDetailModal
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        name={charName}
+        avatarUrl={avatarUrl || null}
+        personality={chatInfo?.character_personality || null}
+      />
     </div>
   );
 }

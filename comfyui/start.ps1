@@ -1,4 +1,8 @@
 #Requires -Version 7.0
+
+# Switch to the script's directory regardless of where it was invoked from
+Set-Location $PSScriptRoot
+
 # ---------------------------------------------------------------------------
 # EPal — ComfyUI Server Launch Script (Windows PowerShell)
 # ---------------------------------------------------------------------------

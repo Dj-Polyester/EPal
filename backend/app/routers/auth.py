@@ -4,7 +4,7 @@ from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
 from app.db import get_db
 from app.dependencies import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, get_current_user
-from app.models import User
+from app.models import User, UserSettings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -51,6 +51,11 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
 
+    # Create default settings row
+    settings = UserSettings(user_id=user.id)
+    db.add(settings)
+    await db.commit()
+
     access_token = create_access_token({"sub": str(user.id)})
     refresh_token = create_refresh_token({"sub": str(user.id)})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
@@ -84,11 +89,20 @@ async def refresh(req: RefreshRequest):
 
 
 @router.get("/me")
-async def me(current_user: User = Depends(get_current_user)):
+async def me(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Ensure settings row exists
+    if not current_user.settings:
+        settings = UserSettings(user_id=current_user.id)
+        db.add(settings)
+        await db.commit()
+        await db.refresh(current_user)
+
     return {
         "id": str(current_user.id),
         "email": current_user.email,
         "username": current_user.username,
         "bio": current_user.bio,
         "onboarding_completed": current_user.onboarding_completed,
+        "thinking_mode": current_user.settings.thinking_mode,
+        "theme": current_user.settings.theme,
     }

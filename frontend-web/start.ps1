@@ -1,4 +1,8 @@
 #Requires -Version 7.0
+
+# Switch to the script's directory regardless of where it was invoked from
+Set-Location $PSScriptRoot
+
 # ---------------------------------------------------------------------------
 # EPal — Frontend Dev Server Launch Script (Windows PowerShell)
 # ---------------------------------------------------------------------------
@@ -19,8 +23,6 @@ if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
     Write-Host "Install Node.js 20+ from https://nodejs.org"
     exit 1
 }
-
-Set-Location frontend-web
 
 if (-not (Test-Path "node_modules")) {
     Write-Host "$Green Installing npm dependencies...$Reset"

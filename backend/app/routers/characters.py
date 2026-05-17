@@ -1,5 +1,6 @@
 import random
 import uuid
+import traceback
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -70,15 +71,16 @@ async def create_character(
     await db.commit()
     await db.refresh(character)
 
-    # Generate avatar via ComfyScript
+    # Generate avatar using the personality prompt directly as the positive prompt
     try:
-        avatar_url = await generate_avatar(req.name, req.personality_prompt)
-        character.avatar_url = avatar_url
-        await db.commit()
-        await db.refresh(character)
+        avatar_url = await generate_avatar(req.personality_prompt)
+        if avatar_url:
+            character.avatar_url = avatar_url
+            await db.commit()
+            await db.refresh(character)
     except Exception:
-        # Avatar generation is non-blocking; we can proceed without it
-        pass
+        # Avatar generation is non-blocking; log and proceed without it
+        traceback.print_exc()
 
     # Auto-create a chat for this character
     chat = Chat(user_id=current_user.id, character_id=character.id)

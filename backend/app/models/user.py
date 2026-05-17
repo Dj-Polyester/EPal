@@ -22,3 +22,15 @@ class User(Base):
 
     characters = relationship("Character", back_populates="creator", cascade="all, delete-orphan")
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
+    settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    thinking_mode = Column(Boolean, default=True, nullable=False)
+    theme = Column(String(20), default="light", nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="settings")

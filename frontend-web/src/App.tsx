@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Auth/Login';
@@ -8,16 +8,31 @@ import CharacterCreate from './components/CharacterCreate/CharacterCreate';
 import Dashboard from './components/Dashboard/Dashboard';
 import ChatRoom from './components/Chat/ChatRoom';
 
+function ThemeWrapper({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (user?.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [user?.theme]);
+
+  return <>{children}</>;
+}
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400 dark:bg-gray-900">Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function RequireOnboarding({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400 dark:bg-gray-900">Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (!user.onboarding_completed) return <Navigate to="/welcome" replace />;
   return <>{children}</>;
@@ -68,7 +83,9 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <ThemeWrapper>
+          <AppRoutes />
+        </ThemeWrapper>
       </BrowserRouter>
     </AuthProvider>
   );

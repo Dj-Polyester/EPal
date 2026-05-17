@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Switch to the script's directory regardless of where it was invoked from
+cd "$(dirname "$0")"
+
 # ---------------------------------------------------------------------------
 # EPal — Frontend Dev Server Launch Script (Linux/macOS)
 # ---------------------------------------------------------------------------
@@ -21,8 +24,6 @@ if ! command -v npm &> /dev/null; then
     echo "Install Node.js 20+ from https://nodejs.org"
     exit 1
 fi
-
-cd frontend-web
 
 if [ ! -d "node_modules" ]; then
     echo -e "${GREEN}Installing npm dependencies...${NC}"

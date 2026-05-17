@@ -1,0 +1,1 @@
+{"nodes": [{"id": "config:v1-inference", "label": "v1-inference config", "file_type": "document", "source_file": "comfyui/models/configs/v1-inference.yaml", "source_location": "1", "source_url": null, "captured_at": null, "author": null, "contributor": null, "rationale": "cond_stage_trainable set to false, different from the one trained before."}], "edges": [], "hyperedges": []}

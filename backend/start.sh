@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Switch to the script's directory regardless of where it was invoked from
+cd "$(dirname "$0")"
+
 # ---------------------------------------------------------------------------
 # EPal — Backend Manual Setup Script (Linux/macOS)
 # ---------------------------------------------------------------------------
@@ -32,7 +35,19 @@ fi
 # --- Backend setup ---------------------------------------------------------
 
 echo -e "${GREEN}[1/4] Setting up backend...${NC}"
-cd backend
+
+# Detect stale venv (e.g., moved project folder, old interpreter path)
+if [ -d ".venv" ] && [ -f ".venv/bin/alembic" ]; then
+    SHEBANG=$(head -1 .venv/bin/alembic)
+    INTERP=${SHEBANG#\#!/}
+    if [ ! -x "$INTERP" ]; then
+        echo -e "${YELLOW}  Stale venv detected (interpreter moved). Recreating...${NC}"
+        rm -rf .venv
+    elif [ ! -x ".venv/bin/python" ]; then
+        echo -e "${YELLOW}  Stale venv detected. Recreating...${NC}"
+        rm -rf .venv
+    fi
+fi
 
 if [ ! -d ".venv" ]; then
     echo "  Creating uv venv..."
@@ -48,30 +63,37 @@ PYTHON="$VENV/bin/python"
 ALEMBIC="$VENV/bin/alembic"
 UVICORN="$VENV/bin/uvicorn"
 
-# --- Environment file ------------------------------------------------------
+# --- Environment file (workspace root) -------------------------------------
 
 ENV_CREATED=false
-if [ ! -f ".env" ]; then
-    cp ../.env.manual .env
-    ENV_CREATED=true
-    echo -e "${YELLOW}  Created backend/.env from .env.manual.${NC}"
+if [ ! -f "../.env" ]; then
+    if [ -f "../.env.manual" ]; then
+        cp ../.env.manual ../.env
+        ENV_CREATED=true
+        echo -e "${YELLOW}  Created .env at workspace root from .env.manual.${NC}"
+    else
+        echo -e "${YELLOW}  .env.manual not found at workspace root; skipping .env creation (Docker?).${NC}"
+    fi
 else
-    echo "  backend/.env already exists, keeping existing file."
+    echo "  .env already exists at workspace root, keeping existing file."
 fi
 
 # --- Generate & inject secret key ------------------------------------------
 
-SECRET_KEY=$($PYTHON -c "import secrets; print(secrets.token_urlsafe(32))")
+if [ -f "../.env" ]; then
+    SECRET_KEY=$($PYTHON -c "import secrets; print(secrets.token_urlsafe(32))")
 
-if grep -q "^SECRET_KEY=" .env; then
-    # Overwrite existing secret key
-    sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" .env
+    if grep -q "^SECRET_KEY=" ../.env; then
+        # Overwrite existing secret key
+        sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" ../.env
+    else
+        # Append if missing
+        echo "SECRET_KEY=$SECRET_KEY" >> ../.env
+    fi
+    echo -e "${GREEN}[2/4] Generated fresh SECRET_KEY.${NC}"
 else
-    # Append if missing
-    echo "SECRET_KEY=$SECRET_KEY" >> .env
+    echo -e "${YELLOW}[2/4] No .env found; skipping SECRET_KEY injection (Docker?).${NC}"
 fi
-
-echo -e "${GREEN}[2/4] Generated fresh SECRET_KEY.${NC}"
 
 # --- Migrations ------------------------------------------------------------
 
@@ -87,8 +109,8 @@ echo -e "Backend is starting on ${YELLOW}http://localhost:8000${NC}"
 echo ""
 
 if [ "$ENV_CREATED" = true ]; then
-    echo -e "${YELLOW}Note:${NC} A new .env was created. Review it if needed:"
-    echo "  cat backend/.env"
+    echo -e "${YELLOW}Note:${NC} A new .env was created at workspace root. Review it if needed:"
+    echo "  cat .env"
     echo ""
 fi
 
@@ -96,10 +118,10 @@ echo -e "${YELLOW}Make sure the following services are also running:${NC}"
 echo "  • PostgreSQL  on port 5432"
 echo "  • Redis       on port 6379"
 echo "  • vLLM        on port 8001  (./serve_llm.sh)"
-echo "  • ComfyUI     on port 8188  (./start_comfyui.sh)"
+echo "  • ComfyUI     on port 8188  (../comfyui/start.sh)"
 echo ""
 echo -e "${YELLOW}Then start the frontend:${NC}"
-echo "  ./start_frontend.sh"
+echo "  ../frontend-web/start.sh"
 echo ""
 echo -e "${BLUE}========================================${NC}"
 echo ""

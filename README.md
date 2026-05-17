@@ -2,6 +2,36 @@
 
 A cross-platform web application where users can create virtual AI characters and chat with them. Characters remember past conversations, reflect their unique personalities, and can generate images (and potentially video/audio) on request.
 
+## Table of Contents
+
+- [Architecture](#architecture)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+  - [Estimated Disk Space](#estimated-disk-space)
+  - [Prerequisites for Media Generation to Actually Work](#prerequisites-for-media-generation-to-actually-work)
+- [Quick Start (Docker)](#quick-start-docker)
+  - [1. Clone and enter the project](#1-clone-and-enter-the-project)
+  - [2. Configure environment variables](#2-configure-environment-variables)
+  - [3. Start all services](#3-start-all-services)
+  - [4. Run the web frontend](#4-run-the-web-frontend)
+- [Manual Setup (without Docker)](#manual-setup-without-docker)
+  - [1. Start the backend](#1-start-the-backend)
+  - [2. Start vLLM](#2-start-vllm)
+  - [3. Start ComfyUI](#3-start-comfyui)
+  - [4. Start the web frontend](#4-start-the-web-frontend)
+- [Environment Variables](#environment-variables)
+- [API Endpoints](#api-endpoints)
+  - [Auth](#auth)
+  - [Users](#users)
+  - [Characters](#characters)
+  - [Chats](#chats)
+  - [WebSocket](#websocket)
+- [Project Structure](#project-structure)
+- [Scalability Notes](#scalability-notes)
+- [Media Generation Setup](#media-generation-setup)
+  - [Where to place models](#where-to-place-models)
+  - [Supported media types](#supported-media-types)
+
 ## Architecture
 
 - **Backend**: Python 3.12, FastAPI, Async SQLAlchemy 2.0, PostgreSQL, Redis
@@ -34,6 +64,15 @@ A cross-platform web application where users can create virtual AI characters an
 - **Python 3.12+** (only if running backend outside Docker)
 - **uv** (only if running backend outside Docker): `pip install uv`
 
+The backend requires **PostgreSQL** and **Redis**. The easiest way is to keep them running via Docker while developing the backend locally:
+
+```bash
+docker compose up -d postgres redis
+```
+Note that this command is unnecessary if using Docker as the compose command already runs these services. 
+
+> If you prefer running everything natively, install PostgreSQL 15+ and Redis 7+ on your system, then copy `.env.manual` → `.env` at the workspace root and edit it with the correct connection URLs. 
+
 ### Estimated Disk Space
 
 | Service | Image + Model Data (approx.) |
@@ -46,6 +85,27 @@ A cross-platform web application where users can create virtual AI characters an
 | **Total** | **~15–27 GB** |
 
 > **Note:** The two AI services (vLLM and ComfyUI) consume the vast majority of space due to CUDA runtimes and downloaded models. The first `docker compose up` will download models automatically; ensure you have sufficient free disk space and a stable internet connection.
+
+### Prerequisites for Media Generation to Actually Work
+
+1. **Download a Stable Diffusion checkpoint** into ComfyUI's `models/checkpoints/` directory.  
+   Popular sources:
+   - [CivitAI](https://civitai.com) (community models, requires free account)
+   - [Hugging Face](https://huggingface.co) (official checkpoints like `stabilityai/stable-diffusion-xl-base-1.0`)
+   - Direct links from model authors (e.g., `anything-v5.safetensors`)
+
+2. **Place the model in your host ComfyUI installation**. The Docker Compose setup automatically mounts your existing ComfyUI installation into the container — no copying needed.
+
+   By default, Docker mounts `$HOME/comfy/ComfyUI` from your host. If your ComfyUI lives elsewhere, edit `.env` after copying it and set `COMFYUI_PATH`:
+
+   ```bash
+   cp .env.docker .env
+   # Edit .env and change COMFYUI_PATH if needed
+   ```
+
+   Your models, custom nodes, and workflows from the host ComfyUI are immediately available inside the container.
+
+> **Note:** The app gracefully handles missing models. If a checkpoint is not installed, the character will politely tell the user it cannot generate that media type yet.
 
 ---
 
@@ -65,7 +125,7 @@ cd /home/polyester/Desktop/Projects/misc/EPal  # or your clone path
 cp .env.docker .env
 ```
 
-Edit `.env` if needed. The defaults work out of the box for local development.
+Edit `.env` (your local copy — not `.env.docker`) if needed. The defaults work out of the box for local development.
 
 ### 3. Start all services
 
@@ -84,13 +144,16 @@ This starts:
 
 ### 4. Run the web frontend
 
+**Linux / macOS:**
 ```bash
-cd frontend-web
-npm install
-npm run dev
+./frontend-web/start.sh
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+**Windows (PowerShell):**
+```powershell
+.\frontend-web\start.ps1
+```
+The script installs `node_modules` automatically if they don't exist, then launches the Vite dev server on `http://localhost:3000`. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
@@ -98,49 +161,41 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 Instead of typing each command by hand, use the provided start scripts. They create the virtual environment, install dependencies, copy the correct `.env` file, run migrations, and launch the backend.
 
-### Prerequisites
-
-The backend requires **PostgreSQL** and **Redis**. The easiest way is to keep them running via Docker while developing the backend locally:
-
-```bash
-docker compose up -d postgres redis
-```
-
-> If you prefer running everything natively, install PostgreSQL 15+ and Redis 7+ on your system and update `.env.manual` with the correct connection URLs before copying it.
+> **Note:** Each of the steps below should be run in a **separate terminal** so the services run concurrently.
 
 ### 1. Start the backend
 
 **Linux / macOS:**
 ```bash
-./start_backend.sh
+./backend/start.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-.\start_backend.ps1
+.\backend\start.ps1
 ```
 
 What the script does:
 1. Checks that `uv` and `python3` / `python` are installed
 2. Creates a uv venv inside `backend/` (if it doesn't exist)
 3. Installs Python dependencies with `uv pip install -e .`
-4. Copies `.env.manual` → `backend/.env` (only if `.env` is missing)
-5. **Generates a random `SECRET_KEY` and writes it into `backend/.env`**
+4. Copies `.env.manual` → `.env` at the workspace root (only if `.env` is missing)
+5. **Generates a random `SECRET_KEY` and writes it into `.env` at the workspace root**
 6. Runs `alembic upgrade head` for database migrations
 7. Starts the FastAPI dev server on port `8000`
 
-### 2. Start vLLM (in a separate terminal)
+### 2. Start vLLM
 
-> **Prerequisite:** You must run `./start_backend.sh` (or `.\start_backend.ps1`) first so the backend venv is created and `vllm` is installed.
+> **Prerequisite:** You must run `./backend/start.sh` (or `.\backend\start.ps1`) first so the backend venv is created and `vllm` is installed.
 
 **Linux / macOS:**
 ```bash
-./serve_llm.sh
+./backend/serve_llm.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-.\serve_llm.ps1
+.\backend\serve_llm.ps1
 ```
 
 These scripts automatically activate the backend venv, then read `VLLM_MODEL`, `VLLM_PORT`, `VLLM_MAX_MODEL_LEN`, and `VLLM_TENSOR_PARALLEL` from `.env` (or `.env.docker` as fallback). The defaults are:
@@ -151,36 +206,51 @@ These scripts automatically activate the backend venv, then read `VLLM_MODEL`, `
 | Port | `8001` |
 | Max model length | `8192` |
 | Tensor parallelism | `1` |
+| GPU memory utilization | `0.25` |
 
-### 3. Start ComfyUI (in a separate terminal)
+**Using a local GGUF model:**
+1. Download the `.gguf` file to `vllm/models/`
+2. Edit `.env` and set both the file path and the base model (for tokenizer/config):
+```bash
+VLLM_MODEL=vllm/models/your-model.gguf
+VLLM_BASE_MODEL=Qwen/Qwen2.5-1.5B-Instruct  # matching non-quantized model on HuggingFace
+```
+The start script will automatically download `config.json` from the base model if it's not present in the same directory as the GGUF file.
+
+For Docker, use the container path:
+```bash
+VLLM_MODEL=/models/your-model.gguf
+```
+
+### 3. Start ComfyUI
 
 **Linux / macOS:**
 ```bash
-./start_comfyui.sh
+./comfyui/start.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-.\start_comfyui.ps1
+.\comfyui\start.ps1
 ```
 
 The script defaults to `$HOME/comfy/ComfyUI` (Linux/macOS) or `%USERPROFILE%\comfy\ComfyUI` (Windows). If ComfyUI is not found there, it is **automatically cloned from GitHub**. You can override the path by setting the `COMFYUI_PATH` environment variable before running the script:
 
 ```bash
 export COMFYUI_PATH=/custom/path/to/ComfyUI
-./start_comfyui.sh
+./comfyui/start.sh
 ```
 
-### 4. Start the web frontend (in a separate terminal)
+### 4. Start the web frontend
 
 **Linux / macOS:**
 ```bash
-./start_frontend.sh
+./frontend-web/start.sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-.\start_frontend.ps1
+.\frontend-web\start.ps1
 ```
 
 The script installs `node_modules` automatically if they don't exist, then launches the Vite dev server on `http://localhost:3000`.
@@ -195,12 +265,15 @@ The script installs `node_modules` automatically if they don't exist, then launc
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection string |
 | `VLLM_BASE_URL` | `http://localhost:8001/v1` | vLLM OpenAI-compatible API URL |
 | `COMFYUI_URL` | `http://localhost:8188` | ComfyUI server URL |
+| `COMFYUI_PATH` | `$HOME/comfy/ComfyUI` | Host ComfyUI path to mount into Docker |
 | `SECRET_KEY` | — | JWT signing secret (change in production!) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | JWT access token lifetime |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | JWT refresh token lifetime |
-| `VLLM_MODEL` | `Qwen/Qwen2.5-1.5B-Instruct` | Model served by vLLM |
+| `VLLM_MODEL` | `Qwen/Qwen2.5-1.5B-Instruct` | HF model ID or local path (e.g., `vllm/models/model.gguf`) |
+| `VLLM_BASE_MODEL` | — | For GGUF files: the matching non-quantized HF model ID |
 | `VLLM_TENSOR_PARALLEL` | `1` | Tensor parallelism for vLLM |
 | `VLLM_MAX_MODEL_LEN` | `8192` | Max sequence length for vLLM |
+| `VLLM_GPU_MEMORY_UTILIZATION` | `0.25` | Fraction of GPU memory vLLM may use (lower if desktop uses GPU) |
 
 ---
 
@@ -240,6 +313,10 @@ EPal/
 ├── .env.manual                 # Environment template for manual setup
 ├── backend/
 │   ├── Dockerfile
+│   ├── start.sh                # Backend start script (Linux/macOS)
+│   ├── start.ps1               # Backend start script (Windows)
+│   ├── serve_llm.sh            # vLLM start script (Linux/macOS)
+│   ├── serve_llm.ps1           # vLLM start script (Windows)
 │   ├── pyproject.toml          # uv project + Python deps
 │   ├── alembic.ini
 │   ├── alembic/
@@ -254,21 +331,28 @@ EPal/
 │       ├── routers/            # REST API routes
 │       ├── services/           # vLLM, ComfyScript, Memory
 │       └── websocket/          # WebSocket chat handler
-└── frontend-web/
-    ├── package.json
-    ├── vite.config.ts
-    ├── tailwind.config.js
-    └── src/
-        ├── App.tsx
-        ├── api/client.ts       # Axios client with interceptors
-        ├── contexts/
-        │   └── AuthContext.tsx
-        └── components/
-            ├── Auth/
-            ├── Onboarding/
-            ├── CharacterCreate/
-            ├── Dashboard/
-            └── Chat/
+├── comfyui/
+│   ├── Dockerfile
+│   ├── start.sh                # ComfyUI start script (Linux/macOS)
+│   ├── start.ps1               # ComfyUI start script (Windows)
+│   └── workflows/              # ComfyUI workflow exports
+├── frontend-web/
+│   ├── package.json
+│   ├── start.sh                # Frontend start script (Linux/macOS)
+│   ├── start.ps1               # Frontend start script (Windows)
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   └── src/
+│       ├── App.tsx
+│       ├── api/client.ts       # Axios client with interceptors
+│       ├── contexts/
+│       │   └── AuthContext.tsx
+│       └── components/
+│           ├── Auth/
+│           ├── Onboarding/
+│           ├── CharacterCreate/
+│           ├── Dashboard/
+│           └── Chat/
 ```
 
 ---
@@ -283,61 +367,15 @@ EPal/
 
 ---
 
-### Prerequisites for Media Generation to Actually Work
-
-1. **Download a Stable Diffusion checkpoint** into ComfyUI's `models/checkpoints/` directory.  
-   Popular sources:
-   - [CivitAI](https://civitai.com) (community models, requires free account)
-   - [Hugging Face](https://huggingface.co) (official checkpoints like `stabilityai/stable-diffusion-xl-base-1.0`)
-   - Direct links from model authors (e.g., `anything-v5.safetensors`)
-
-2. **Place the model in the ComfyUI container**. The Docker Compose volume `comfyui_models` persists models across restarts.
-
-   **Option A — Copy into the running container:**
-   ```bash
-   # Download a checkpoint (example: Anything V5)
-   wget https://example.com/anything-v5.safetensors -O anything-v5.safetensors
-
-   # Copy it into the container
-   docker cp anything-v5.safetensors vf_comfyui:/app/ComfyUI/models/checkpoints/
-   ```
-
-   **Option B — Mount a local folder (recommended for large collections):**  
-   Edit `docker-compose.yml` under the `comfyui` service:
-   ```yaml
-   volumes:
-     - comfyui_models:/app/ComfyUI/models
-     - /path/to/your/local_models:/app/ComfyUI/models/checkpoints
-   ```
-   Then restart:
-   ```bash
-   docker compose down && docker compose up -d
-   ```
-
-> **Note:** The app gracefully handles missing models. If a checkpoint is not installed, the character will politely tell the user it cannot generate that media type yet.
-
----
-
 ## Media Generation Setup
 
-ComfyUI requires you to download model checkpoints into its `models/` directory. The Docker Compose volume `comfyui_models` persists these across restarts.
+ComfyUI requires you to download model checkpoints into its `models/` directory.
 
 ### Where to place models
 
-With Docker, the easiest way is to copy checkpoints directly into the running container's volume:
+**With Docker:** The container mounts your existing host ComfyUI installation (default `$HOME/comfy/ComfyUI`). Simply place your models in your host ComfyUI's `models/checkpoints/` folder — they will be available inside the container automatically. No copying or editing `docker-compose.yml` required.
 
-```bash
-# Example: Download an SDXL checkpoint and place it in ComfyUI
-docker cp sdxl_base.safetensors vf_comfyui:/app/ComfyUI/models/checkpoints/
-```
-
-Or mount a local models folder by editing `docker-compose.yml`:
-
-```yaml
-volumes:
-  - comfyui_models:/app/ComfyUI/models
-  - /path/to/your/local_models:/app/ComfyUI/models/checkpoints  # optional local mount
-```
+**Without Docker (manual setup):** Place checkpoints in your local ComfyUI installation under `models/checkpoints/`.
 
 ### Supported media types
 
@@ -350,7 +388,3 @@ volumes:
 > **Note:** The app gracefully handles missing models. If a checkpoint is not installed, the character will politely tell the user it cannot generate that media type yet.
 
 ---
-
-## License
-
-MIT
