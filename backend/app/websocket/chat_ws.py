@@ -1,4 +1,6 @@
+import asyncio
 import json
+import time
 import uuid
 from fastapi import WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,6 +72,8 @@ async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
                 "created_at": user_msg.created_at.isoformat() if user_msg.created_at else None,
             })
 
+            t0 = time.time()
+
             # Build context with memory
             context = await build_chat_context(
                 db=db,
@@ -84,27 +88,45 @@ async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
 
             # Get vLLM response
             try:
-                assistant_text = await chat_completion(context, max_tokens=512, temperature=0.8)
+                thinking_mode = user.settings.thinking_mode if user.settings else True
+                assistant_text = await chat_completion(
+                    context,
+                    max_tokens=512,
+                    temperature=0.8,
+                    thinking_mode=thinking_mode,
+                )
             except Exception as e:
+                await websocket.send_json({"type": "typing", "status": "stop"})
                 await websocket.send_json({"type": "error", "message": f"AI response failed: {str(e)}"})
                 continue
-            finally:
-                await websocket.send_json({"type": "typing", "status": "stop"})
+            t1 = time.time()
+            print(f"[WS] vLLM response took {t1 - t0:.2f}s: {assistant_text[:200]}...")
 
-            # Extract media requests
+            # Extract media requests — only process the FIRST one to avoid spam
             media_requests = extract_media_requests(assistant_text)
+            print(f"[WS] Found {len(media_requests)} media requests: {media_requests}")
+
             media_replacements: list[tuple[str, str | None]] = []
 
-            for media_type, description in media_requests:
+            # Only process the first media request; ignore the rest
+            for media_type, description in media_requests[:1]:
+                await websocket.send_json({"type": "status", "message": f"Generating {media_type}..."})
+                print(f"[WS] Generating {media_type} prompt for: {description}")
                 # Generate a refined image prompt using vLLM with the full chat context
                 image_prompt = await _generate_media_image_prompt(context, description)
+                t2 = time.time()
+                print(f"[WS] Media image prompt took {t2 - t1:.2f}s: {image_prompt[:200]}...")
 
+                print(f"[WS] Calling generate_media for {media_type} with source_image={character.avatar_url}")
                 media_url = await generate_media(
                     media_type,
                     image_prompt,
                     source_image_url=character.avatar_url,
                 )
+                t3 = time.time()
+                print(f"[WS] generate_media returned in {t3 - t2:.2f}s: {media_url}")
                 media_replacements.append((media_type, media_url))
+                await websocket.send_json({"type": "status", "message": f"{media_type} generation done"})
 
                 # If media generated, save media record
                 if media_url:
@@ -119,6 +141,7 @@ async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
 
             # Replace tags in text
             final_text = replace_media_tags(assistant_text, media_replacements)
+            print(f"[WS] Final text: {final_text[:300]}...")
 
             # Save assistant message
             # Find first media url if any, for media_url field
@@ -133,6 +156,11 @@ async def chat_websocket(websocket: WebSocket, chat_id: str, token: str):
             db.add(assistant_msg)
             await db.commit()
             await db.refresh(assistant_msg)
+
+            await websocket.send_json({"type": "typing", "status": "stop"})
+
+            t4 = time.time()
+            print(f"[WS] Total turn took {t4 - t0:.2f}s")
 
             await websocket.send_json({
                 "type": "assistant_message",

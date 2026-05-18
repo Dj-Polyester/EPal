@@ -14,6 +14,7 @@ export default function CharacterCreate() {
     setRandomizing(true);
     try {
       const res = await client.get('/characters/prompts/random');
+      setName(res.data.name);
       setPersonality(res.data.prompt);
     } catch {
       // ignore

@@ -38,7 +38,15 @@ _NODE_WIDGET_NAMES = {
 }
 
 
-OLLAMA_NODE_TYPES = {"OllamaConnectivityV2", "OllamaGenerateV2", "OllamaConnectivity", "OllamaGenerate", "PreviewAny"}
+OLLAMA_NODE_TYPES = {
+    "OllamaConnectivityV2", "OllamaGenerateV2", "OllamaConnectivity", "OllamaGenerate",
+    "PreviewAny",
+}
+
+# Node types that are not installed / custom nodes we want to always strip
+UNKNOWN_NODE_TYPES = {
+    "f23a0cc7-4042-4914-9828-d09ab4e8b07f",
+}
 
 
 def _get_widget_value(node: dict, input_name: str):
@@ -72,10 +80,54 @@ def _workflow_to_prompt(workflow_data: dict, *, remove_ollama: bool = False) -> 
     prompt = {}
     removed_ids = set()
 
+    # Always strip nodes whose types are unknown / not installed
+    for nid, node in nodes.items():
+        if node.get("type") in UNKNOWN_NODE_TYPES:
+            removed_ids.add(nid)
+
+    # Also strip Ollama nodes when requested (chargen workflow has them)
     if remove_ollama:
         for nid, node in nodes.items():
             if node.get("type") in OLLAMA_NODE_TYPES:
                 removed_ids.add(nid)
+
+    # Build a mapping of target_node -> list of (input_name, origin_node, origin_slot)
+    # for direct rewiring through removed passthrough nodes
+    rewired: dict[int, list[tuple[str, int, int]]] = {}
+    for removed_id in removed_ids:
+        removed_node = nodes[removed_id]
+        # Collect input links to this removed node (slot_idx -> (origin_node, origin_slot))
+        in_links: dict[int, tuple[int, int]] = {}
+        for inp in removed_node.get("inputs", []):
+            link_id = inp.get("link")
+            if link_id is not None:
+                link = links_by_id.get(link_id)
+                if link is not None:
+                    in_slot = len(in_links)  # simple slot index based on order
+                    in_links[in_slot] = (link[1], link[2])
+        # Collect output links from this removed node (slot_idx -> list of target links)
+        out_links: dict[int, list] = {}
+        for link_id, link in links_by_id.items():
+            if link[1] == removed_id:
+                out_slot = link[2]
+                if out_slot not in out_links:
+                    out_links[out_slot] = []
+                out_links[out_slot].append(link)
+        # Rewire: for each output slot that matches an input slot, connect origin -> target
+        for out_slot, target_links in out_links.items():
+            if out_slot in in_links:
+                origin_node, origin_slot = in_links[out_slot]
+                for target_link in target_links:
+                    target_node_id = target_link[3]
+                    target_slot = target_link[4]
+                    if target_node_id not in rewired:
+                        rewired[target_node_id] = []
+                    # Find the input name for this target slot
+                    target_node = nodes[target_node_id]
+                    for inp in target_node.get("inputs", []):
+                        if inp.get("link") == target_link[0]:
+                            rewired[target_node_id].append((inp["name"], origin_node, origin_slot))
+                            break
 
     for nid, node in nodes.items():
         if nid in removed_ids:
@@ -84,8 +136,17 @@ def _workflow_to_prompt(workflow_data: dict, *, remove_ollama: bool = False) -> 
         class_type = node.get("type", "")
         inputs = {}
 
+        # Apply any rewired connections first
+        if nid in rewired:
+            for input_name, origin_node, origin_slot in rewired[nid]:
+                inputs[input_name] = [str(origin_node), origin_slot]
+
         for inp in node.get("inputs", []):
             input_name = inp["name"]
+            # Skip if already rewired
+            if input_name in inputs:
+                continue
+
             link_id = inp.get("link")
 
             if link_id is not None:
@@ -93,7 +154,7 @@ def _workflow_to_prompt(workflow_data: dict, *, remove_ollama: bool = False) -> 
                 if link is not None:
                     origin_node = link[1]
                     if origin_node in removed_ids:
-                        # Connection to removed Ollama node -> set placeholder
+                        # Connection to removed node -> set placeholder
                         inputs[input_name] = ""
                         continue
                     origin_slot = link[2]
@@ -124,6 +185,10 @@ async def _load_workflow_prompt(workflow_path: Path, *, remove_ollama: bool = Fa
 
 async def _run_workflow_http(workflow: dict, prefix: str, timeout: int = 180) -> str | None:
     """Submit workflow via ComfyUI HTTP API and poll for result."""
+    import time
+    t0 = time.time()
+    print(f"[ComfyUI] _run_workflow_http called, prefix={prefix}, url={_COMFY_URL}")
+    print(f"[ComfyUI] Workflow nodes: {list(workflow.keys())}")
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post(f"{_COMFY_URL}/prompt", json={"prompt": workflow}) as resp:
@@ -133,27 +198,37 @@ async def _run_workflow_http(workflow: dict, prefix: str, timeout: int = 180) ->
                     return None
                 data = await resp.json()
                 prompt_id = data.get("prompt_id")
+                print(f"[ComfyUI] prompt submitted, id={prompt_id}")
                 if not prompt_id:
                     return None
 
-            for _ in range(timeout):
+            for i in range(timeout):
                 await asyncio.sleep(1)
                 async with session.get(f"{_COMFY_URL}/history/{prompt_id}") as resp:
                     if resp.status == 200:
                         history = await resp.json()
                         if prompt_id in history:
                             outputs = history[prompt_id].get("outputs", {})
+                            print(f"[ComfyUI] history found for {prompt_id}, outputs={list(outputs.keys())}")
                             for node_id, node_output in outputs.items():
                                 if "images" in node_output:
                                     image = node_output["images"][0]
                                     filename = image["filename"]
                                     subfolder = image.get("subfolder", "")
-                                    return f"{_COMFY_URL}/view?filename={filename}&subfolder={subfolder}&type=output"
+                                    url = f"{_COMFY_URL}/view?filename={filename}&subfolder={subfolder}&type=output"
+                                    print(f"[ComfyUI] Image ready after {i+1}s: {url}")
+                                    return url
+                            print(f"[ComfyUI] No images in outputs for {prompt_id}")
                             break
+            print(f"[ComfyUI] Timeout after {timeout}s")
             return None
         except Exception as e:
             print(f"[ComfyUI] workflow error: {e}")
+            import traceback
+            traceback.print_exc()
             return None
+        finally:
+            print(f"[ComfyUI] _run_workflow_http total time: {time.time() - t0:.2f}s")
 
 
 async def _ensure_image_in_input(image_url: str) -> str | None:
@@ -166,8 +241,13 @@ async def _ensure_image_in_input(image_url: str) -> str | None:
         # Try to extract from path
         filename = os.path.basename(parsed.path) or "source.png"
 
-    input_dir = os.path.join(os.path.dirname(__file__), "../../../comfyui/input")
-    input_dir = os.path.abspath(input_dir)
+    # Determine ComfyUI input folder:
+    # 1. Use env var COMFYUI_INPUT_PATH if set
+    # 2. Fall back to project-local comfyui/input (for Docker / bundled setups)
+    input_dir = _settings.COMFYUI_INPUT_PATH
+    if not input_dir:
+        input_dir = os.path.join(os.path.dirname(__file__), "../../../comfyui/input")
+        input_dir = os.path.abspath(input_dir)
     os.makedirs(input_dir, exist_ok=True)
     dest_path = os.path.join(input_dir, filename)
 
@@ -175,9 +255,8 @@ async def _ensure_image_in_input(image_url: str) -> str | None:
     if os.path.exists(dest_path):
         return filename
 
-    # Try local copy from output folder first (bind-mounted)
-    output_dir = os.path.join(os.path.dirname(__file__), "../../../comfyui/output")
-    output_dir = os.path.abspath(output_dir)
+    # Try local copy from output folder first (same parent as input_dir)
+    output_dir = os.path.join(os.path.dirname(input_dir), "output")
     local_src = os.path.join(output_dir, filename)
     if os.path.exists(local_src):
         shutil.copy2(local_src, dest_path)
@@ -229,11 +308,13 @@ async def _generate_media_image_prompt(chat_context: list[dict], description: st
 
 def _inject_prompt_into_workflow(workflow: dict, prompt: str) -> None:
     """Inject a text prompt into the first CLIPTextEncode node that isn't the negative prompt."""
+    print(f"[ComfyUI] Injecting prompt into workflow:\n{prompt}\n")
     for node in workflow.values():
         if node.get("class_type") == "CLIPTextEncode":
             inputs = node.get("inputs", {})
             if inputs.get("text") != "blurry ugly bad":
                 inputs["text"] = prompt
+                print(f"[ComfyUI] Prompt injected into node, text now: {inputs['text'][:200]}...")
                 break
 
 
@@ -265,7 +346,8 @@ async def generate_avatar(personality_prompt: str) -> str | None:
     _randomize_ksampler_seed(workflow)
     _set_filename_prefix(workflow, "avatar")
 
-    return await _run_workflow_http(workflow, "avatar")
+    # Avatars can take several minutes on first-run (model load into GPU)
+    return await _run_workflow_http(workflow, "avatar", timeout=600)
 
 
 async def generate_media(
@@ -283,31 +365,49 @@ async def generate_media(
         # Video / audio stubs remain unimplemented for now
         return None
 
+    print(f"[ComfyUI] generate_media called: prompt={prompt[:100]}..., source={source_image_url}")
+
+    # --- Try charedit first if we have a source image ---
     if source_image_url:
-        # --- charedit: edit existing character photo ---
         image_filename = await _ensure_image_in_input(source_image_url)
-        if not image_filename:
-            return None
+        if image_filename:
+            print(f"[ComfyUI] Using charedit workflow with source image: {image_filename}")
+            workflow = await _load_workflow_prompt(CHAREDIT_WORKFLOW_PATH)
 
-        workflow = await _load_workflow_prompt(CHAREDIT_WORKFLOW_PATH)
+            # Inject source image
+            for node in workflow.values():
+                if node.get("class_type") == "LoadImage":
+                    node["inputs"]["image"] = image_filename
+                    print(f"[ComfyUI] Injected source image into LoadImage node")
+                    break
 
-        # Inject source image
-        for node in workflow.values():
-            if node.get("class_type") == "LoadImage":
-                node["inputs"]["image"] = image_filename
-                break
+            _inject_prompt_into_workflow(workflow, prompt)
+            _randomize_ksampler_seed(workflow)
+            _set_filename_prefix(workflow, "media")
 
-        _inject_prompt_into_workflow(workflow, prompt)
-        _randomize_ksampler_seed(workflow)
-        _set_filename_prefix(workflow, "media")
+            # Log workflow prompt nodes
+            for nid, node in workflow.items():
+                if node.get("class_type") == "CLIPTextEncode":
+                    print(f"[ComfyUI] Node {nid} text: {node.get('inputs', {}).get('text', 'EMPTY')[:150]}")
 
-        return await _run_workflow_http(workflow, "media")
+            result = await _run_workflow_http(workflow, "media")
+            if result:
+                return result
+            print(f"[ComfyUI] charedit failed, falling back to chargen")
+        else:
+            print(f"[ComfyUI] Could not prepare source image, falling back to chargen")
 
     # --- chargen: generic image from scratch ---
+    print(f"[ComfyUI] Using chargen workflow")
     workflow = await _load_workflow_prompt(CHARGEN_WORKFLOW_PATH, remove_ollama=True)
 
     _inject_prompt_into_workflow(workflow, prompt)
     _randomize_ksampler_seed(workflow)
     _set_filename_prefix(workflow, "media")
+
+    # Log workflow prompt nodes
+    for nid, node in workflow.items():
+        if node.get("class_type") == "CLIPTextEncode":
+            print(f"[ComfyUI] Node {nid} text: {node.get('inputs', {}).get('text', 'EMPTY')[:150]}")
 
     return await _run_workflow_http(workflow, "media")

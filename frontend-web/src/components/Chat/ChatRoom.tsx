@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import client from '../../api/client';
+import client, { API_BASE } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import CharacterDetailModal from '../CharacterDetailModal';
 import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
@@ -30,8 +30,10 @@ export default function ChatRoom() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [status, setStatus] = useState('');
   const [wsError, setWsError] = useState('');
   const [detailOpen, setDetailOpen] = useState(false);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -63,20 +65,29 @@ export default function ChatRoom() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log('[WS] received:', data.type, data);
       if (data.type === 'connected') {
         // ready
       } else if (data.type === 'user_message') {
         setMessages((prev) => [...prev, data]);
       } else if (data.type === 'assistant_message') {
+        console.log('[WS] assistant_message content:', data.content);
+        console.log('[WS] assistant_message media_url:', data.media_url);
         setMessages((prev) => [...prev, data]);
         setTyping(false);
         setSending(false);
       } else if (data.type === 'typing') {
         setTyping(data.status === 'start');
+        if (data.status === 'stop') {
+          setStatus('');
+        }
+      } else if (data.type === 'status') {
+        setStatus(data.message);
       } else if (data.type === 'error') {
         setWsError(data.message);
         setTyping(false);
         setSending(false);
+        setStatus('');
       }
     };
 
@@ -109,6 +120,14 @@ export default function ChatRoom() {
   };
 
   const renderContent = (content: string, mediaUrl: string | null, mediaType: string | null) => {
+    // Rewrite ComfyUI image URLs to go through our backend proxy (avoids CORS)
+    const proxyIfNeeded = (url: string) => {
+      if (url.startsWith('http://localhost:8188/') || url.startsWith('http://127.0.0.1:8188/')) {
+        return `${API_BASE}/media/proxy?url=${encodeURIComponent(url)}`;
+      }
+      return url;
+    };
+
     const parts = content.split(/(\[Here is the [^\]]+\])/g);
     return (
       <div className="space-y-2">
@@ -116,11 +135,22 @@ export default function ChatRoom() {
           const match = part.match(/\[Here is the (\w+): (.+)\]/);
           if (match) {
             const type = match[1];
-            const url = match[2];
+            const url = proxyIfNeeded(match[2]);
             return (
               <div key={i} className="mt-2">
                 {type === 'image' && (
-                  <img src={url} alt="generated" className="max-w-xs rounded-lg shadow-sm border" />
+                  imgErrors[url] ? (
+                    <div className="max-w-xs p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg border border-red-200">
+                      Image failed to load. URL: {url}
+                    </div>
+                  ) : (
+                    <img
+                      src={url}
+                      alt="generated"
+                      className="max-w-xs rounded-lg shadow-sm border"
+                      onError={() => setImgErrors((prev) => ({ ...prev, [url]: true }))}
+                    />
+                  )
                 )}
                 {type === 'video' && (
                   <video src={url} controls className="max-w-xs rounded-lg shadow-sm border" />
@@ -143,13 +173,24 @@ export default function ChatRoom() {
         {mediaUrl && !content.includes(mediaUrl) && (
           <div className="mt-2">
             {mediaType === 'image' && (
-              <img src={mediaUrl} alt="generated" className="max-w-xs rounded-lg shadow-sm border" />
+              imgErrors[proxyIfNeeded(mediaUrl)] ? (
+                <div className="max-w-xs p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg border border-red-200">
+                  Image failed to load. URL: {proxyIfNeeded(mediaUrl)}
+                </div>
+              ) : (
+                <img
+                  src={proxyIfNeeded(mediaUrl)}
+                  alt="generated"
+                  className="max-w-xs rounded-lg shadow-sm border"
+                  onError={() => setImgErrors((prev) => ({ ...prev, [proxyIfNeeded(mediaUrl)]: true }))}
+                />
+              )
             )}
             {mediaType === 'video' && (
-              <video src={mediaUrl} controls className="max-w-xs rounded-lg shadow-sm border" />
+              <video src={proxyIfNeeded(mediaUrl)} controls className="max-w-xs rounded-lg shadow-sm border" />
             )}
             {mediaType === 'audio' && (
-              <audio src={mediaUrl} controls className="w-full max-w-xs" />
+              <audio src={proxyIfNeeded(mediaUrl)} controls className="w-full max-w-xs" />
             )}
           </div>
         )}

@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://epal:epal@localhost:5432/epal"
     REDIS_URL: str = "redis://localhost:6379/0"
     VLLM_BASE_URL: str = "http://localhost:8001/v1"
-    VLLM_MODEL: str = "Qwen/Qwen2.5-1.5B-Instruct"
+    VLLM_MODEL: str = "Qwen3-4B-GGUF"
     COMFYUI_URL: str = "http://localhost:8188"
+    COMFYUI_INPUT_PATH: str | None = None
     SECRET_KEY: str = "supersecretkeychangethis"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7

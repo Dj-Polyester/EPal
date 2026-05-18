@@ -59,8 +59,8 @@ foreach ($File in $EnvFiles) {
 }
 
 # Fallback defaults
-if (-not $ServedName)   { $ServedName    = "Qwen3-0.6B-GGUF" }
-if (-not $ModelPath)    { $ModelPath     = "models\Qwen3-0.6B-Q4_K_M.gguf" }
+if (-not $ServedName)   { $ServedName    = "Qwen3-4B-GGUF" }
+if (-not $ModelPath)    { $ModelPath     = "models\Qwen3-4B-Instruct-2507-Q4_K_M.gguf" }
 if (-not $Port)         { $Port           = "8001" }
 if (-not $MaxLen)       { $MaxLen         = "4096" }
 if (-not $TensorParallel) { $TensorParallel = "1" }
@@ -102,7 +102,7 @@ if (Test-Path $FlashinferCache) {
 
 if ($ModelPath -match "\.gguf$") {
     $BaseModel = $env:VLLM_BASE_MODEL
-    if (-not $BaseModel) { $BaseModel = "Qwen/Qwen3-0.6B" }
+    if (-not $BaseModel) { $BaseModel = "Qwen/Qwen3-4B" }
     Write-Host "$Yellow Detected GGUF file. Using base model for config/tokenizer:$Reset $BaseModel"
 
     # vLLM expects config.json in the same directory as the GGUF file
@@ -132,7 +132,9 @@ except Exception as e:
         --port $Port `
         --max-model-len $MaxLen `
         --tensor-parallel-size $TensorParallel `
-        --gpu-memory-utilization $GpuUtil
+        --gpu-memory-utilization $GpuUtil `
+        --max-num-seqs 256 `
+        --enable-prefix-caching
 } else {
     vllm serve $ModelPath `
         --host 0.0.0.0 `

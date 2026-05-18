@@ -4,7 +4,7 @@ import client from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import CharacterDetailModal from '../CharacterDetailModal';
 import SettingsModal from '../SettingsModal';
-import { Plus, MessageCircle, User, LogOut, Settings } from 'lucide-react';
+import { Plus, MessageCircle, User, LogOut, Settings, Trash2 } from 'lucide-react';
 
 interface ChatItem {
   id: string;
@@ -35,6 +35,16 @@ export default function Dashboard() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user, navigate]);
+
+  const handleDelete = async (chat: ChatItem) => {
+    if (!confirm(`Delete "${chat.character_name}" and all their chats?`)) return;
+    try {
+      await client.delete(`/characters/${chat.character_id}`);
+      setChats((prev) => prev.filter((c) => c.character_id !== chat.character_id));
+    } catch {
+      alert('Failed to delete character');
+    }
+  };
 
   if (!user) return null;
 
@@ -118,6 +128,17 @@ export default function Dashboard() {
                     {new Date(chat.updated_at).toLocaleString()}
                   </p>
                 </div>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDelete(chat);
+                  }}
+                  className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 transition"
+                  title="Delete character"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
                 <MessageCircle className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               </Link>
             ))}

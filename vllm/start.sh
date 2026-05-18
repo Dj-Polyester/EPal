@@ -36,9 +36,9 @@ fi
 
 # --- Load config from .env -------------------------------------------------
 
-MODEL="${VLLM_MODEL:-Qwen3-0.6B-GGUF}"
+MODEL="${VLLM_MODEL:-Qwen3-4B-GGUF}"
 GGUF_PATH="${VLLM_GGUF_PATH:-}"
-TOKENIZER="${VLLM_TOKENIZER:-Qwen/Qwen3-0.6B}"
+TOKENIZER="${VLLM_TOKENIZER:-Qwen/Qwen3-4B}"
 PORT="${VLLM_PORT:-8001}"
 MAX_LEN="${VLLM_MAX_MODEL_LEN:-4096}"
 TENSOR_PARALLEL="${VLLM_TENSOR_PARALLEL:-1}"
@@ -115,7 +115,7 @@ fi
 
 # Local GGUF files need extra flags so vLLM knows how to load them
 if [[ "$MODEL_PATH" == *.gguf ]]; then
-    BASE_MODEL="${VLLM_BASE_MODEL:-Qwen/Qwen3-0.6B}"
+    BASE_MODEL="${VLLM_BASE_MODEL:-Qwen/Qwen3-4B}"
     echo -e "${YELLOW}Detected GGUF file. Using base model for config/tokenizer:${NC} $BASE_MODEL"
 
     # vLLM expects config.json in the same directory as the GGUF file
@@ -144,7 +144,9 @@ except Exception as e:
         --port "$PORT" \
         --max-model-len "$MAX_LEN" \
         --tensor-parallel-size "$TENSOR_PARALLEL" \
-        --gpu-memory-utilization "$GPU_UTIL"
+        --gpu-memory-utilization "$GPU_UTIL" \
+        --max-num-seqs 256 \
+        --enable-prefix-caching
 else
     # HuggingFace model ID or local directory
     vllm serve "$MODEL_PATH" \
