@@ -1,1 +1,0 @@
-{"nodes": [{"id": "config:v2-inference", "label": "v2-inference config", "file_type": "document", "source_file": "comfyui/models/configs/v2-inference.yaml", "source_location": "1", "source_url": null, "captured_at": null, "author": null, "contributor": null, "rationale": "use_ema set to false because this is an inference only config."}], "edges": [], "hyperedges": []}

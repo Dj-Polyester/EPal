@@ -1,5 +1,5 @@
 Create an application where a user can create virtual ai characters of any sort and chat with them. Add a README that 
-gives detailed instructions for setup and running the app. 
+gives detailed instructions for all steps such as setup, running, testing, building and deploying the app.
 
 First Usage steps
 1) A skippable welcoming screen opens and a text input is displayed.
@@ -13,24 +13,34 @@ Character creation steps
 4) A character is generated with the personality and traits
 5) A chat with the character is added to the chats and the user is redirected to the chat interface 
 
-Specifics
+Specifications:
 * For the new users, the welcome page is the aforementioned welcoming screen
 * For familiar users, the welcome page is the chat interface
 * User should be able to create multiple characters
 * The app is able to operate multiple chats, each chat between a user and a character
 * A prompt randomization feature should be available in the character creation screen for users that dont know the character they want
-* Whenever a user requests a media about the context, the character should be able to generate it. Otherwise it says 
+* Whenever a user requests an image about the context, the character should be able to generate it. Otherwise it says 
 it does not have the media.
 * The way the character chats should reflect its personality
-* The character has remembers past events, the info about itself and the user
-* Character creation uses comfyscript
-* LLMs use vLLM
-* The app should be scalable
+* The character remembers past events, the info about itself and the user
+* Character and image creation uses Fal.AI FLUX 1 Schnell
+* LLMs will use DeepSeek V4 Flash
 * The app should be cross-platform
-* Backend programming language is Python
-* Use uv venv for Python dependencies
+* Vercel will be used for the API routing ands store API keys.
+* Use Supabase for authentication and data storage (PostgreSQL)
+* Use Cloudflare R2 for media storage
+* Mobile app UI/frontend will use Expo
 
-Example:
-I am into anime. I am an eccentric person who likes making people 
-laugh. I like learning and openmindedness but I like to hurry and 
-dont know when to do the proper thing sometimes 
+* Use TypeScript only.
+* Never use JavaScript.
+* Use async/await.
+* No inline styles.
+* Follow ESLint.
+* No duplicated code.
+* Write clean comments only when needed.
+* There should be only be app folder for Expo and api folder for Supabase and Vercel 
+
+# Example user:
+# I am into anime. I am an eccentric person who likes making people 
+# laugh. I like learning and openmindedness but I like to hurry and 
+# dont know when to do the proper thing sometimes 

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "media_model", "label": "Media SQLAlchemy Model", "file_type": "code", "source_file": "backend/app/models/media.py", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

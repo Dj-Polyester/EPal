@@ -1,390 +1,351 @@
 # EPal
 
-A cross-platform web application where users can create virtual AI characters and chat with them. Characters remember past conversations, reflect their unique personalities, and can generate images (and potentially video/audio) on request.
-
-## Table of Contents
-
-- [Architecture](#architecture)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-  - [Estimated Disk Space](#estimated-disk-space)
-  - [Prerequisites for Media Generation to Actually Work](#prerequisites-for-media-generation-to-actually-work)
-- [Quick Start (Docker)](#quick-start-docker)
-  - [1. Clone and enter the project](#1-clone-and-enter-the-project)
-  - [2. Configure environment variables](#2-configure-environment-variables)
-  - [3. Start all services](#3-start-all-services)
-  - [4. Run the web frontend](#4-run-the-web-frontend)
-- [Manual Setup (without Docker)](#manual-setup-without-docker)
-  - [1. Start the backend](#1-start-the-backend)
-  - [2. Start vLLM](#2-start-vllm)
-  - [3. Start ComfyUI](#3-start-comfyui)
-  - [4. Start the web frontend](#4-start-the-web-frontend)
-- [Environment Variables](#environment-variables)
-- [API Endpoints](#api-endpoints)
-  - [Auth](#auth)
-  - [Users](#users)
-  - [Characters](#characters)
-  - [Chats](#chats)
-  - [WebSocket](#websocket)
-- [Project Structure](#project-structure)
-- [Scalability Notes](#scalability-notes)
-- [Media Generation Setup](#media-generation-setup)
-  - [Where to place models](#where-to-place-models)
-  - [Supported media types](#supported-media-types)
-
-## Architecture
-
-- **Backend**: Python 3.12, FastAPI, Async SQLAlchemy 2.0, PostgreSQL, Redis
-- **AI LLM**: vLLM (OpenAI-compatible API server)
-- **AI Media**: ComfyUI + ComfyScript (image/video/audio generation)
-- **Frontend Web**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Frontend Mobile**: Expo (React Native) — planned for future release
-- **Infra**: Docker Compose for local development, designed for horizontal scaling
-
----
+A cross-platform mobile application where users can create virtual AI characters and chat with them. Characters remember past events, the user's bio, and their own personality. Built with Expo, Supabase, Vercel, DeepSeek-Chat, and Fal.AI.
 
 ## Features
 
-- **Account & Auth**: JWT-based authentication with access/refresh tokens
-- **Skippable Onboarding**: New users can share info about themselves; characters remember it
-- **Character Creation**: Prompt-based personality definition with a "Randomize" feature
-- **Persistent Memory**: Sliding context window + automatic summarization for long-term memory
-- **Personality-Driven Chat**: Characters speak and act according to their defined traits
-- **Media Generation**: Characters detect requests for image/video/audio in natural language and generate media via ComfyUI
-- **Multiple Chats**: Create many characters, each with their own ongoing conversation
-- **Real-time Chat**: WebSocket streaming for live message exchange
-
----
-
-## Prerequisites
-
-- **Docker** and **Docker Compose**
-- **NVIDIA Container Toolkit** (for GPU-accelerated vLLM and ComfyUI)
-- **Node.js 20+** (only if running frontend outside Docker)
-- **Python 3.12+** (only if running backend outside Docker)
-- **uv** (only if running backend outside Docker): `pip install uv`
-
-The backend requires **PostgreSQL** and **Redis**. The easiest way is to keep them running via Docker while developing the backend locally:
-
-```bash
-docker compose up -d postgres redis
-```
-Note that this command is unnecessary if using Docker as the compose command already runs these services. 
-
-> If you prefer running everything natively, install PostgreSQL 15+ and Redis 7+ on your system, then copy `.env.manual` → `.env` at the workspace root and edit it with the correct connection URLs. 
-
-### Estimated Disk Space
-
-| Service | Image + Model Data (approx.) |
-|---------|------------------------------|
-| PostgreSQL 15 | ~200 MB |
-| Redis 7 | ~30 MB |
-| vLLM (CUDA runtime + model) | **~6–10 GB** total (base image ~4–6 GB + `Qwen2.5-1.5B-Instruct` ~3 GB) |
-| ComfyUI (CUDA runtime + checkpoints) | **~8–15 GB** total (base image ~5–8 GB + Stable Diffusion checkpoints ~2–5 GB) |
-| Backend (FastAPI + uv venv) | ~500 MB–1 GB |
-| **Total** | **~15–27 GB** |
-
-> **Note:** The two AI services (vLLM and ComfyUI) consume the vast majority of space due to CUDA runtimes and downloaded models. The first `docker compose up` will download models automatically; ensure you have sufficient free disk space and a stable internet connection.
-
-### Prerequisites for Media Generation to Actually Work
-
-1. **Download a Stable Diffusion checkpoint** into ComfyUI's `models/checkpoints/` directory.  
-   Popular sources:
-   - [CivitAI](https://civitai.com) (community models, requires free account)
-   - [Hugging Face](https://huggingface.co) (official checkpoints like `stabilityai/stable-diffusion-xl-base-1.0`)
-   - Direct links from model authors (e.g., `anything-v5.safetensors`)
-
-2. **Place the model in your host ComfyUI installation**. The Docker Compose setup automatically mounts your existing ComfyUI installation into the container — no copying needed.
-
-   By default, Docker mounts `$HOME/comfy/ComfyUI` from your host. If your ComfyUI lives elsewhere, edit `.env` after copying it and set `COMFYUI_PATH`:
-
-   ```bash
-   cp .env.docker .env
-   # Edit .env and change COMFYUI_PATH if needed
-   ```
-
-   Your models, custom nodes, and workflows from the host ComfyUI are immediately available inside the container.
-
-> **Note:** The app gracefully handles missing models. If a checkpoint is not installed, the character will politely tell the user it cannot generate that media type yet.
-
----
-
-## Quick Start (Docker)
-
-The fastest way to get everything running is with Docker Compose.
-
-### 1. Clone and enter the project
-
-```bash
-cd /home/polyester/Desktop/Projects/misc/EPal  # or your clone path
-```
-
-### 2. Configure environment variables
-
-```bash
-cp .env.docker .env
-```
-
-Edit `.env` (your local copy — not `.env.docker`) if needed. The defaults work out of the box for local development.
-
-### 3. Start all services
-
-```bash
-docker compose up -d
-```
-
-This starts:
-- **PostgreSQL** on port `5432`
-- **Redis** on port `6379`
-- **vLLM** on port `8001` (downloads `Qwen/Qwen2.5-1.5B-Instruct` on first run)
-- **ComfyUI** on port `8188`
-- **Backend API** on port `8000`
-
-> **Note**: vLLM will download the model on first startup, which may take several minutes depending on your internet connection and GPU.
-
-### 4. Run the web frontend
-
-**Linux / macOS:**
-```bash
-./frontend-web/start.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\frontend-web\start.ps1
-```
-The script installs `node_modules` automatically if they don't exist, then launches the Vite dev server on `http://localhost:3000`. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## Manual Setup (without Docker)
-
-Instead of typing each command by hand, use the provided start scripts. They create the virtual environment, install dependencies, copy the correct `.env` file, run migrations, and launch the backend.
-
-> **Note:** Each of the steps below should be run in a **separate terminal** so the services run concurrently.
-
-### 1. Start the backend
-
-**Linux / macOS:**
-```bash
-./backend/start.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\backend\start.ps1
-```
-
-What the script does:
-1. Checks that `uv` and `python3` / `python` are installed
-2. Creates a uv venv inside `backend/` (if it doesn't exist)
-3. Installs Python dependencies with `uv pip install -e .`
-4. Copies `.env.manual` → `.env` at the workspace root (only if `.env` is missing)
-5. **Generates a random `SECRET_KEY` and writes it into `.env` at the workspace root**
-6. Runs `alembic upgrade head` for database migrations
-7. Starts the FastAPI dev server on port `8000`
-
-### 2. Start vLLM
-
-> **Prerequisite:** You must run `./backend/start.sh` (or `.\backend\start.ps1`) first so the backend venv is created and `vllm` is installed.
-
-**Linux / macOS:**
-```bash
-./backend/serve_llm.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\backend\serve_llm.ps1
-```
-
-These scripts automatically activate the backend venv, then read `VLLM_MODEL`, `VLLM_PORT`, `VLLM_MAX_MODEL_LEN`, and `VLLM_TENSOR_PARALLEL` from `.env` (or `.env.docker` as fallback). The defaults are:
-
-| Setting | Default |
-|---|---|
-| Model | `Qwen/Qwen2.5-1.5B-Instruct` |
-| Port | `8001` |
-| Max model length | `8192` |
-| Tensor parallelism | `1` |
-| GPU memory utilization | `0.25` |
-
-**Using a local GGUF model:**
-1. Download the `.gguf` file to `vllm/models/`
-2. Edit `.env` and set both the file path and the base model (for tokenizer/config):
-```bash
-VLLM_MODEL=vllm/models/your-model.gguf
-VLLM_BASE_MODEL=Qwen/Qwen2.5-1.5B-Instruct  # matching non-quantized model on HuggingFace
-```
-The start script will automatically download `config.json` from the base model if it's not present in the same directory as the GGUF file.
-
-For Docker, use the container path:
-```bash
-VLLM_MODEL=/models/your-model.gguf
-```
-
-### 3. Start ComfyUI
-
-**Linux / macOS:**
-```bash
-./comfyui/start.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\comfyui\start.ps1
-```
-
-The script defaults to `$HOME/comfy/ComfyUI` (Linux/macOS) or `%USERPROFILE%\comfy\ComfyUI` (Windows). If ComfyUI is not found there, it is **automatically cloned from GitHub**. You can override the path by setting the `COMFYUI_PATH` environment variable before running the script:
-
-```bash
-export COMFYUI_PATH=/custom/path/to/ComfyUI
-./comfyui/start.sh
-```
-
-### 4. Start the web frontend
-
-**Linux / macOS:**
-```bash
-./frontend-web/start.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\frontend-web\start.ps1
-```
-
-The script installs `node_modules` automatically if they don't exist, then launches the Vite dev server on `http://localhost:3000`.
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection string |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection string |
-| `VLLM_BASE_URL` | `http://localhost:8001/v1` | vLLM OpenAI-compatible API URL |
-| `COMFYUI_URL` | `http://localhost:8188` | ComfyUI server URL |
-| `COMFYUI_PATH` | `$HOME/comfy/ComfyUI` | Host ComfyUI path to mount into Docker |
-| `SECRET_KEY` | — | JWT signing secret (change in production!) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | JWT access token lifetime |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | JWT refresh token lifetime |
-| `VLLM_MODEL` | `Qwen/Qwen2.5-1.5B-Instruct` | HF model ID or local path (e.g., `vllm/models/model.gguf`) |
-| `VLLM_BASE_MODEL` | — | For GGUF files: the matching non-quantized HF model ID |
-| `VLLM_TENSOR_PARALLEL` | `1` | Tensor parallelism for vLLM |
-| `VLLM_MAX_MODEL_LEN` | `8192` | Max sequence length for vLLM |
-| `VLLM_GPU_MEMORY_UTILIZATION` | `0.25` | Fraction of GPU memory vLLM may use (lower if desktop uses GPU) |
-
----
-
-## API Endpoints
-
-### Auth
-- `POST /auth/register` — Register new user
-- `POST /auth/login` — Login
-- `POST /auth/refresh` — Refresh access token
-- `GET /auth/me` — Get current user
-
-### Users
-- `POST /users/onboarding` — Save bio and complete onboarding
-- `POST /users/onboarding/skip` — Skip onboarding
-
-### Characters
-- `GET /characters/prompts/random` — Get a random personality prompt
-- `POST /characters` — Create a character (auto-generates avatar + chat)
-- `GET /characters` — List user's characters
-- `GET /characters/{id}` — Get a specific character
-
-### Chats
-- `GET /chats` — List user's active chats
-- `GET /chats/{id}/messages` — Get chat message history
-
-### WebSocket
-- `WS /ws/chat/{chat_id}?token={jwt}` — Real-time chat connection
-
----
+- **Authentication** via Supabase Auth (email + password)
+- **Name setup** — users choose a name for characters to address them by
+- **Skippable onboarding** — users can share a bio so characters remember them
+- **Character creation** with auto-generated avatars via Fal.AI FLUX 1 Schnell
+- **Prompt randomization** for users who don't know what character to create
+- **Multi-chat support** — each character has its own chat thread
+- **Personality-driven responses** — DeepSeek-Chat stays in character using system prompts
+- **Image generation** — when a user explicitly requests a picture, DeepSeek invokes a tool that generates an img2img variation via Fal.AI using the character's avatar as reference
+- **Graceful decline** — if image generation fails, the character declines in their own speaking style
+- **Real-time messaging** via Supabase Realtime
+- **Dark mode** settings persisted per user
 
 ## Project Structure
 
 ```
 EPal/
-├── docker-compose.yml          # Full stack orchestration
-├── .env.docker                 # Environment template for Docker Compose
-├── .env.manual                 # Environment template for manual setup
-├── backend/
-│   ├── Dockerfile
-│   ├── start.sh                # Backend start script (Linux/macOS)
-│   ├── start.ps1               # Backend start script (Windows)
-│   ├── serve_llm.sh            # vLLM start script (Linux/macOS)
-│   ├── serve_llm.ps1           # vLLM start script (Windows)
-│   ├── pyproject.toml          # uv project + Python deps
-│   ├── alembic.ini
-│   ├── alembic/
-│   │   ├── env.py
-│   │   └── versions/
-│   └── app/
-│       ├── main.py             # FastAPI entry point
-│       ├── config.py           # Pydantic settings
-│       ├── db.py               # Async SQLAlchemy setup
-│       ├── dependencies.py     # Auth & current user deps
-│       ├── models/             # SQLAlchemy models
-│       ├── routers/            # REST API routes
-│       ├── services/           # vLLM, ComfyScript, Memory
-│       └── websocket/          # WebSocket chat handler
-├── comfyui/
-│   ├── Dockerfile
-│   ├── start.sh                # ComfyUI start script (Linux/macOS)
-│   ├── start.ps1               # ComfyUI start script (Windows)
-│   └── workflows/              # ComfyUI workflow exports
-├── frontend-web/
-│   ├── package.json
-│   ├── start.sh                # Frontend start script (Linux/macOS)
-│   ├── start.ps1               # Frontend start script (Windows)
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   └── src/
-│       ├── App.tsx
-│       ├── api/client.ts       # Axios client with interceptors
-│       ├── contexts/
-│       │   └── AuthContext.tsx
-│       └── components/
-│           ├── Auth/
-│           ├── Onboarding/
-│           ├── CharacterCreate/
-│           ├── Dashboard/
-│           └── Chat/
+├── app/          # Expo React Native app (TypeScript)
+├── api/          # Vercel serverless API (Hono + TypeScript)
+└── README.md
 ```
 
----
+## Prerequisites
 
-## Scalability Notes
+- Node.js 20+
+- npm or yarn
+- [Expo CLI](https://docs.expo.dev/get-started/installation/)
+- [Vercel CLI](https://vercel.com/docs/cli)
+- A [Supabase](https://supabase.com) project
+- A [Fal.AI](https://fal.ai) API key
+- A [DeepSeek](https://platform.deepseek.com) API key
+- A [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket + credentials
 
-- **Backend**: Stateless (JWT auth, no server sessions). Scale horizontally with multiple replicas behind a load balancer.
-- **WebSocket**: Uses Redis pub/sub architecture-ready. For multiple backend replicas, add Redis-backed message broadcasting so any replica can push to connected clients.
-- **vLLM**: Scale vertically with `--tensor-parallel-size` and `--pipeline-parallel-size`. Scale horizontally by running multiple vLLM instances behind a load balancer.
-- **ComfyUI**: For high throughput, run multiple ComfyUI instances behind a queue worker system (e.g., Celery + Redis).
-- **Database**: PostgreSQL can be replaced with a managed service (AWS RDS, Google Cloud SQL, etc.) and read replicas can be added for scaling reads.
+## Environment Variables
 
----
+### API (`api/.env.local`)
 
-## Media Generation Setup
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SECRET_KEY=your-secret-key
+SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+DEEPSEEK_API_KEY=your-deepseek-key
+FAL_KEY=your-fal-key
+R2_ACCOUNT_ID=your-r2-account-id
+R2_ACCESS_KEY_ID=your-r2-access-key
+R2_SECRET_ACCESS_KEY=your-r2-secret-key
+R2_BUCKET_NAME=your-bucket-name
+# Optional: custom public domain for R2 (e.g., https://media.yourdomain.com)
+R2_PUBLIC_DOMAIN=
+```
 
-ComfyUI requires you to download model checkpoints into its `models/` directory.
+### App (`app/.env`)
 
-### Where to place models
+```
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+EXPO_PUBLIC_API_URL=https://your-vercel-deployment.vercel.app
+```
 
-**With Docker:** The container mounts your existing host ComfyUI installation (default `$HOME/comfy/ComfyUI`). Simply place your models in your host ComfyUI's `models/checkpoints/` folder — they will be available inside the container automatically. No copying or editing `docker-compose.yml` required.
+## Supabase Setup
 
-**Without Docker (manual setup):** Place checkpoints in your local ComfyUI installation under `models/checkpoints/`.
+### 1. Enable Auth
 
-### Supported media types
+In your Supabase project, go to **Authentication > Providers** and ensure **Email** provider is enabled. Disable "Confirm email" if you want immediate access during development.
 
-| Type | Required Model | Typical Location |
-|------|---------------|------------------|
-| **Images** | Stable Diffusion checkpoint (e.g., `sdxl_base.safetensors`, `anything-v5.safetensors`) | `models/checkpoints/` |
-| **Video** | Video diffusion model (e.g., Wan 2.1, LTX-Video) | `models/checkpoints/` or `models/diffusion_models/` |
-| **Audio** | Stable Audio Open or similar | `models/audio/` |
+### 2. Run Migrations
 
-> **Note:** The app gracefully handles missing models. If a checkpoint is not installed, the character will politely tell the user it cannot generate that media type yet.
+In the Supabase SQL Editor, run:
 
----
+```sql
+-- Profiles table (extends auth.users)
+create table if not exists public.profiles (
+  id uuid references auth.users on delete cascade primary key,
+  username text unique,
+  bio text,
+  onboarding_completed boolean not null default false,
+  theme text not null default 'light',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Characters table
+create table if not exists public.characters (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  personality_prompt text not null,
+  avatar_url text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Chats table
+create table if not exists public.chats (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  character_id uuid references public.characters(id) on delete cascade not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Messages table
+create table if not exists public.messages (
+  id uuid default gen_random_uuid() primary key,
+  chat_id uuid references public.chats(id) on delete cascade not null,
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  media_url text,
+  media_type text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable Row Level Security
+alter table public.profiles enable row level security;
+alter table public.characters enable row level security;
+alter table public.chats enable row level security;
+alter table public.messages enable row level security;
+
+-- Profiles policies
+create policy "Users can view own profile"
+  on public.profiles for select
+  using (auth.uid() = id);
+
+create policy "Users can update own profile"
+  on public.profiles for update
+  using (auth.uid() = id);
+
+-- Characters policies
+create policy "Users can view own characters"
+  on public.characters for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert own characters"
+  on public.characters for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete own characters"
+  on public.characters for delete
+  using (auth.uid() = user_id);
+
+-- Chats policies
+create policy "Users can view own chats"
+  on public.chats for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert own chats"
+  on public.chats for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete own chats"
+  on public.chats for delete
+  using (auth.uid() = user_id);
+
+-- Messages policies
+create policy "Users can view messages in own chats"
+  on public.messages for select
+  using (exists (
+    select 1 from public.chats where chats.id = messages.chat_id and chats.user_id = auth.uid()
+  ));
+
+create policy "Users can insert messages in own chats"
+  on public.messages for insert
+  with check (exists (
+    select 1 from public.chats where chats.id = messages.chat_id and chats.user_id = auth.uid()
+  ));
+
+-- Function to create profile on signup
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, username, onboarding_completed, theme)
+  values (new.id, null, false, 'light');
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Trigger for new users
+create or replace trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- Note: The trigger above automatically creates a profile row when a user signs up.
+-- The API does NOT manually insert profiles during registration.
+```
+For a fresh start
+```sql
+drop schema public cascade;
+create schema public;
+
+grant usage on schema public to postgres, anon, authenticated, service_role;
+grant all on schema public to postgres, service_role;
+```
+### 3. Enable Realtime
+
+In Supabase Dashboard, go to **Database > Replication** and enable realtime for the `messages` table.
+
+## Running Locally
+
+### 1. Install API Dependencies
+
+```bash
+cd api
+npm install
+```
+
+### 2. Start API Dev Server
+
+```bash
+cd api
+npm run dev
+```
+
+The API will be available at `http://localhost:8000`.
+
+### 3. Install App Dependencies
+
+```bash
+cd ../app
+npm install
+```
+
+### 4. Start Expo App
+
+```bash
+npx expo start
+```
+
+Scan the QR code with the **Expo Go** app on your phone, or press `i` for iOS simulator / `a` for Android emulator.
+
+## Testing
+
+### Manual Test Flows
+
+1. **Auth**
+   - Register with email and password only
+   - Log out and log back in with email
+   - Verify token refresh works by leaving the app open
+
+2. **Name Setup**
+   - After registration, enter your name
+   - Verify characters address you by this name in chat
+
+3. **Onboarding**
+   - After name setup, enter a bio and save
+   - Verify the bio is persisted
+   - Log out, register again, and skip onboarding
+   - Verify you land on the Dashboard immediately
+
+4. **Character Creation**
+   - Tap "New Character"
+   - Enter a name and personality
+   - Tap "Create Character & Start Chat"
+   - Verify an avatar is auto-generated
+   - Go back and tap "Randomize" to test prompt randomization
+
+5. **Chat**
+   - Send a text message
+   - Verify the character responds in character
+   - Request an image (e.g., "Can you send me a picture of yourself?")
+   - Verify an image is generated using the avatar as reference
+   - Test graceful failure by temporarily breaking Fal.AI credentials
+   - Verify the character declines naturally
+
+6. **Settings**
+   - Switch between light and dark themes
+   - Verify changes persist after restart
+
+7. **Delete**
+   - Delete a character from the Dashboard
+   - Verify the chat and character are removed
+
+## Building
+
+### API
+
+```bash
+cd api
+vercel --prod
+```
+
+### Mobile App
+
+For a development build (required for native modules):
+
+```bash
+cd app
+npx expo prebuild
+npx expo run:android   # or run:ios
+```
+
+For production builds via EAS:
+
+```bash
+cd app
+npm install -g eas-cli
+eas build --platform android   # or --platform ios
+```
+
+## Deploying
+
+### API
+
+1. Link your Vercel project:
+   ```bash
+   cd api
+   vercel link
+   ```
+2. Add environment variables in the Vercel dashboard or via CLI:
+   ```bash
+    vercel env add SUPABASE_SECRET_KEY
+   ```
+3. Deploy:
+   ```bash
+   vercel --prod
+   ```
+
+### App
+
+1. Update `EXPO_PUBLIC_API_URL` in `app/.env` to your production Vercel URL.
+2. Build with EAS:
+   ```bash
+   cd app
+   eas build --platform all
+   ```
+3. Submit to stores:
+   ```bash
+   eas submit --platform ios
+   eas submit --platform android
+   ```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Mobile App | Expo, React Native, TypeScript, React Navigation |
+| API | Vercel Edge Functions, Hono, TypeScript |
+| Auth & Database | Supabase (PostgreSQL + Auth + Realtime) |
+| LLM | DeepSeek-Chat via OpenAI-compatible API |
+| Image Generation | Fal.AI FLUX 1 Schnell (text-to-image + img2img) |
+| Media Storage | Cloudflare R2 (S3-compatible) |
+| Icons | lucide-react-native |
+
+## Notes
+
+- **Never commit `.env` or `.env.local` files.** Add them to `.gitignore`.
+- The API uses **function calling** with DeepSeek. Only when the user explicitly requests a picture of the character does the `generate_image` tool fire.
+- **Img2img** uses the character's stored `avatar_url` as the style reference and a prompt composed by DeepSeek based on chat context.
+- If Fal.AI or R2 fails during image generation, the tool returns an error to DeepSeek, which then generates a natural, in-character decline response.
+- All database queries enforce **Row Level Security** so users can only access their own data.

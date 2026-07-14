@@ -1,0 +1,15 @@
+{
+  "name": "epal",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "api",
+    "app"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=api",
+    "dev:app": "npm run start --workspace=app",
+    "build:api": "npm run build --workspace=api",
+    "deploy:api": "npm run deploy --workspace=api"
+  }
+}
