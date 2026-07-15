@@ -267,6 +267,8 @@ export default function ChatScreen() {
         <TextInput
           value={input}
           onChangeText={setInput}
+          onSubmitEditing={handleSend}
+          returnKeyType="send"
           placeholder="Type a message..."
           placeholderTextColor={colors.textMuted}
           style={[styles.input, { backgroundColor: colors.surfaceAlt, color: colors.text }]}

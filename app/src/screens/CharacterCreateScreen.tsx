@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { Sparkles, Wand2 } from 'lucide-react-native';
+import { Sparkles, Wand2, ArrowLeft } from 'lucide-react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -74,6 +74,9 @@ export default function CharacterCreateScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <ArrowLeft size={22} color={colors.textMuted} />
+          </TouchableOpacity>
           <Sparkles size={24} color={colors.primary} />
           <Text style={[styles.title, { color: colors.text }]}>Create a Character</Text>
         </View>
@@ -136,6 +139,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
+  backButton: { padding: 6, marginRight: 4 },
   title: { fontSize: 20, fontWeight: '700' },
   field: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '500', marginBottom: 6 },

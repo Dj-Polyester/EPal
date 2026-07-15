@@ -34,6 +34,7 @@ import userRoutes from './routes/users';
 import characterRoutes from './routes/characters';
 import chatRoutes from './routes/chats';
 import respondRoute from './routes/chat';
+import feedbackRoutes from './routes/feedback';
 
 const app = new Hono().basePath('/api');
 
@@ -48,6 +49,7 @@ app.route('/users', userRoutes);
 app.route('/characters', characterRoutes);
 app.route('/chats', chatRoutes);
 app.route('/chat', respondRoute);
+app.route('/feedback', feedbackRoutes);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
@@ -62,7 +64,7 @@ serve({
   // Test Supabase connection
   try {
     const { supabaseAdmin } = await import('./lib/supabase');
-    const { data, error } = await supabaseAdmin.from('profiles').select('count', { count: 'exact', head: true });
+    const { error } = await supabaseAdmin.from('profiles').select('count', { count: 'exact', head: true });
     if (error) {
       console.error('[Startup] Supabase connection test FAILED:', error.message);
       if (error.message.includes('permission denied')) {

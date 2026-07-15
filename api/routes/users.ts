@@ -1,13 +1,6 @@
 import { Hono } from 'hono';
 import { supabaseAdmin } from '../lib/supabase';
 
-function getUserId(c: any): string | null {
-  const authHeader = c.req.header('Authorization');
-  const token = authHeader?.replace('Bearer ', '') || '';
-  if (!token) return null;
-  return null; // We'll validate in each handler via supabaseAdmin.auth.getUser
-}
-
 const app = new Hono();
 
 app.post('/name', async (c) => {

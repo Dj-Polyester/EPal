@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -56,33 +56,31 @@ export default function DashboardScreen() {
   );
 
   const handleDelete = async (chat: ChatItem) => {
-    Alert.alert(
-      'Delete Character',
-      `Delete "${chat.character_name}" and all their chats?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await getToken();
-              const res = await fetch(`${API_BASE}/api/characters/${chat.character_id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (res.ok) {
-                setChats((prev) => prev.filter((c) => c.character_id !== chat.character_id));
-              } else {
-                Alert.alert('Error', 'Failed to delete character');
-              }
-            } catch {
-              Alert.alert('Error', 'Failed to delete character');
-            }
-          },
-        },
-      ]
-    );
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm(`Delete "${chat.character_name}" and all their chats?`)
+      : true;
+
+    if (!confirmed) return;
+
+    try {
+      const token = await getToken();
+      console.log('[Dashboard] Deleting character:', chat.character_id);
+      const res = await fetch(`${API_BASE}/api/characters/${chat.character_id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        console.log('[Dashboard] Delete success');
+        setChats((prev) => prev.filter((c) => c.character_id !== chat.character_id));
+      } else {
+        const data = await res.json();
+        console.error('[Dashboard] Delete failed:', data);
+        Alert.alert('Error', data.detail || 'Failed to delete character');
+      }
+    } catch (err: any) {
+      console.error('[Dashboard] Delete error:', err);
+      Alert.alert('Error', 'Failed to delete character');
+    }
   };
 
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -90,48 +88,57 @@ export default function DashboardScreen() {
   const renderItem = ({ item }: { item: ChatItem }) => {
     const hasAvatar = item.character_avatar_url && !imgErrors[item.character_avatar_url];
     return (
-    <TouchableOpacity
-      onPress={() =>
-        navigation.navigate('Chat', {
-          chatId: item.id,
-          characterName: item.character_name,
-          avatarUrl: item.character_avatar_url,
-        })
-      }
-      style={[styles.chatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-    >
-      <View style={styles.chatRow}>
-        <View style={[styles.avatar, { backgroundColor: colors.primaryLight }]}>
-          {hasAvatar ? (
-            <Image
-              source={{ uri: item.character_avatar_url! }}
-              style={styles.avatarImage}
-              resizeMode="cover"
-              onError={() => {
-                console.log('[Dashboard] Image failed to load:', item.character_avatar_url);
-                if (item.character_avatar_url) {
-                  setImgErrors((prev) => ({ ...prev, [item.character_avatar_url!]: true }));
-                }
-              }}
-            />
-          ) : (
-            <User size={20} color={colors.primary} />
-          )}
-        </View>
-        <View style={styles.chatInfo}>
-          <Text style={[styles.chatName, { color: colors.text }]} numberOfLines={1}>
-            {item.character_name}
-          </Text>
-          <Text style={[styles.chatDate, { color: colors.textMuted }]}>
-            {new Date(item.updated_at).toLocaleString()}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteButton}>
+      <View style={[styles.chatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('Chat', {
+              chatId: item.id,
+              characterName: item.character_name,
+              avatarUrl: item.character_avatar_url,
+            })
+          }
+          style={styles.chatBody}
+        >
+          <View style={styles.chatRow}>
+            <View style={[styles.avatar, { backgroundColor: colors.primaryLight }]}>
+              {hasAvatar ? (
+                <Image
+                  source={{ uri: item.character_avatar_url! }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                  onError={() => {
+                    console.log('[Dashboard] Image failed to load:', item.character_avatar_url);
+                    if (item.character_avatar_url) {
+                      setImgErrors((prev) => ({ ...prev, [item.character_avatar_url!]: true }));
+                    }
+                  }}
+                />
+              ) : (
+                <User size={20} color={colors.primary} />
+              )}
+            </View>
+            <View style={styles.chatInfo}>
+              <Text style={[styles.chatName, { color: colors.text }]} numberOfLines={1}>
+                {item.character_name}
+              </Text>
+              <Text style={[styles.chatDate, { color: colors.textMuted }]}>
+                {new Date(item.updated_at).toLocaleString()}
+              </Text>
+            </View>
+            <MessageCircle size={18} color={colors.textMuted} />
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            console.log('[Dashboard] Trash pressed for:', item.character_name, item.character_id);
+            handleDelete(item);
+          }}
+          style={styles.deleteButton}
+          activeOpacity={0.5}
+        >
           <Trash2 size={18} color={colors.textMuted} />
         </TouchableOpacity>
-        <MessageCircle size={18} color={colors.textMuted} />
       </View>
-    </TouchableOpacity>
     );
   };
 
@@ -226,8 +233,14 @@ const styles = StyleSheet.create({
   list: { gap: 10 },
   chatCard: {
     borderRadius: 12,
-    padding: 14,
     borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  chatBody: {
+    flex: 1,
+    padding: 14,
   },
   chatRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
@@ -242,7 +255,15 @@ const styles = StyleSheet.create({
   chatInfo: { flex: 1 },
   chatName: { fontSize: 15, fontWeight: '600' },
   chatDate: { fontSize: 12, marginTop: 2 },
-  deleteButton: { padding: 6, marginRight: 4 },
+  deleteButton: {
+    padding: 14,
+    paddingLeft: 8,
+    backgroundColor: 'transparent',
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyText: { textAlign: 'center', marginTop: 40, fontSize: 14 },
   emptyCard: {
     alignItems: 'center',

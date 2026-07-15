@@ -11,10 +11,11 @@ A cross-platform mobile application where users can create virtual AI characters
 - **Prompt randomization** for users who don't know what character to create
 - **Multi-chat support** — each character has its own chat thread
 - **Personality-driven responses** — DeepSeek-Chat stays in character using system prompts
-- **Image generation** — when a user explicitly requests a picture, DeepSeek invokes a tool that generates an img2img variation via Fal.AI using the character's avatar as reference
+- **Image generation** — when a user explicitly requests a picture, DeepSeek composes a scene prompt and invokes Fal.AI FLUX 2 Klein 9B Edit (img2img) using the character avatar as reference
 - **Graceful decline** — if image generation fails, the character declines in their own speaking style
 - **Real-time messaging** via Supabase Realtime
 - **Dark mode** settings persisted per user
+- **In-app feedback** — users can send feedback directly to the team via email (powered by Resend)
 
 ## Project Structure
 
@@ -34,6 +35,7 @@ EPal/
 - A [Supabase](https://supabase.com) project
 - A [Fal.AI](https://fal.ai) API key
 - A [DeepSeek](https://platform.deepseek.com) API key
+- A [Resend](https://resend.com) API key
 - A [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket + credentials
 
 ## Environment Variables
@@ -52,6 +54,8 @@ R2_SECRET_ACCESS_KEY=your-r2-secret-key
 R2_BUCKET_NAME=your-bucket-name
 # Optional: custom public domain for R2 (e.g., https://media.yourdomain.com)
 R2_PUBLIC_DOMAIN=
+# Resend API key for feedback emails
+RESEND_API_KEY=your-resend-key
 ```
 
 ### App (`app/.env`)
@@ -198,36 +202,47 @@ In Supabase Dashboard, go to **Database > Replication** and enable realtime for 
 
 ## Running Locally
 
-### 1. Install API Dependencies
+All commands can be run from the **project root** using npm workspaces.
+
+### 1. Install Dependencies
 
 ```bash
-cd api
 npm install
 ```
+
+This installs dependencies for both `api/` and `app/` workspaces.
 
 ### 2. Start API Dev Server
 
 ```bash
-cd api
-npm run dev
+npm run dev:api
 ```
 
 The API will be available at `http://localhost:8000`.
 
-### 3. Install App Dependencies
+### 3. Start Expo App
+
+In a separate terminal:
 
 ```bash
-cd ../app
-npm install
+npm run dev:app
 ```
 
-### 4. Start Expo App
+Then press `w` to open in the browser, or scan the QR code with the **Expo Go** app on your phone, or press `i` for iOS simulator / `a` for Android emulator.
 
-```bash
-npx expo start
-```
+### Available Root Scripts
 
-Scan the QR code with the **Expo Go** app on your phone, or press `i` for iOS simulator / `a` for Android emulator.
+| Script | Description |
+|--------|-------------|
+| `npm run dev:api` | Start the Hono API dev server (`localhost:8000`) |
+| `npm run dev:app` | Start the Expo dev server (`localhost:8081`) |
+| `npm run build:api` | Type-check and build the API |
+| `npm run deploy:api` | Deploy the API to Vercel |
+| `npm run prebuild:app` | Run `expo prebuild` for native modules |
+| `npm run run:android` | Start Expo on Android emulator |
+| `npm run run:ios` | Start Expo on iOS simulator |
+| `npm run build:app` | Build the app with EAS |
+| `npm run submit:app` | Submit the app to stores with EAS |
 
 ## Testing
 
@@ -267,17 +282,27 @@ Scan the QR code with the **Expo Go** app on your phone, or press `i` for iOS si
    - Switch between light and dark themes
    - Verify changes persist after restart
 
-7. **Delete**
-   - Delete a character from the Dashboard
-   - Verify the chat and character are removed
+7. **Feedback**
+    - Go to Settings and tap "Give Feedback"
+    - Write a message and send
+    - Verify the email is received at the configured address
+
+8. **Delete**
+    - Delete a character from the Dashboard
+    - Verify the chat and character are removed
 
 ## Building
 
 ### API
 
 ```bash
-cd api
-vercel --prod
+npm run build:api
+```
+
+This type-checks the API code. For production deployment:
+
+```bash
+npm run deploy:api
 ```
 
 ### Mobile App
@@ -285,17 +310,15 @@ vercel --prod
 For a development build (required for native modules):
 
 ```bash
-cd app
-npx expo prebuild
-npx expo run:android   # or run:ios
+npm run prebuild:app
+npm run run:android   # or npm run run:ios
 ```
 
-For production builds via EAS:
+For production builds via EAS (from project root):
 
 ```bash
-cd app
 npm install -g eas-cli
-eas build --platform android   # or --platform ios
+npm run build:app -- --platform android   # or --platform ios
 ```
 
 ## Deploying
@@ -309,25 +332,24 @@ eas build --platform android   # or --platform ios
    ```
 2. Add environment variables in the Vercel dashboard or via CLI:
    ```bash
-    vercel env add SUPABASE_SECRET_KEY
+   vercel env add SUPABASE_SECRET_KEY
    ```
-3. Deploy:
+3. Deploy from project root:
    ```bash
-   vercel --prod
+   npm run deploy:api
    ```
 
 ### App
 
 1. Update `EXPO_PUBLIC_API_URL` in `app/.env` to your production Vercel URL.
-2. Build with EAS:
+2. Build with EAS from project root:
    ```bash
-   cd app
-   eas build --platform all
+   npm run build:app -- --platform all
    ```
-3. Submit to stores:
+3. Submit to stores from project root:
    ```bash
-   eas submit --platform ios
-   eas submit --platform android
+   npm run submit:app -- --platform ios
+   npm run submit:app -- --platform android
    ```
 
 ## Tech Stack
@@ -338,14 +360,17 @@ eas build --platform android   # or --platform ios
 | API | Vercel Edge Functions, Hono, TypeScript |
 | Auth & Database | Supabase (PostgreSQL + Auth + Realtime) |
 | LLM | DeepSeek-Chat via OpenAI-compatible API |
-| Image Generation | Fal.AI FLUX 1 Schnell (text-to-image + img2img) |
+| Avatar Generation | Fal.AI FLUX 1 Schnell (text-to-image) |
+| Chat Image Generation | Fal.AI FLUX 2 Klein 9B Edit (img2img, avatar as reference) |
 | Media Storage | Cloudflare R2 (S3-compatible) |
+| Email | Resend |
 | Icons | lucide-react-native |
 
 ## Notes
 
 - **Never commit `.env` or `.env.local` files.** Add them to `.gitignore`.
 - The API uses **function calling** with DeepSeek. Only when the user explicitly requests a picture of the character does the `generate_image` tool fire.
-- **Img2img** uses the character's stored `avatar_url` as the style reference and a prompt composed by DeepSeek based on chat context.
+- **Img2img** uses Fal.AI FLUX 2 Klein 9B Edit with the character's stored `avatar_url` as the image reference and a prompt composed by DeepSeek based on chat context.
 - If Fal.AI or R2 fails during image generation, the tool returns an error to DeepSeek, which then generates a natural, in-character decline response.
 - All database queries enforce **Row Level Security** so users can only access their own data.
+- The dev server loads `.env.local` with `override: true` behavior (forced via `dotenv.parse`) so `.env.local` always takes precedence over shell env vars.

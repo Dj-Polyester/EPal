@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ThemeColors {
   background: string;
@@ -49,10 +50,33 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  const setTheme = (theme: 'light' | 'dark') => {
+  // Load persisted theme on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('epal_theme');
+        if (stored === 'dark') setIsDark(true);
+        else if (stored === 'light') setIsDark(false);
+      } catch {
+        // ignore
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
+
+  const setTheme = async (theme: 'light' | 'dark') => {
     setIsDark(theme === 'dark');
+    try {
+      await AsyncStorage.setItem('epal_theme', theme);
+    } catch {
+      // ignore
+    }
   };
+
+  if (!ready) return null;
 
   return (
     <ThemeContext.Provider value={{ isDark, colors: isDark ? darkColors : lightColors, setTheme }}>

@@ -10,6 +10,11 @@
     "dev:api": "npm run dev --workspace=api",
     "dev:app": "npm run start --workspace=app",
     "build:api": "npm run build --workspace=api",
-    "deploy:api": "npm run deploy --workspace=api"
+    "deploy:api": "npm run deploy --workspace=api",
+    "prebuild:app": "npm run prebuild --workspace=app",
+    "run:android": "npm run android --workspace=app",
+    "run:ios": "npm run ios --workspace=app",
+    "build:app": "cd app && eas build",
+    "submit:app": "cd app && eas submit"
   }
 }

@@ -40,21 +40,31 @@ export async function generateImageFromPrompt(
 ): Promise<string> {
   configureFal();
 
-  const result = await fal.subscribe('fal-ai/flux/schnell', {
-    input: {
-      prompt,
-      image_url: imageUrl,
-      image_size: 'landscape_4_3',
-      num_inference_steps: 4,
-    },
-    pollInterval: 500,
-    logs: true,
-  });
+  console.log('[Fal.AI] Calling fal-ai/flux-2/klein/9b/edit with:');
+  console.log('  prompt:', prompt);
+  console.log('  image_url:', imageUrl);
 
-  console.log('[Fal.AI] Image result:', JSON.stringify(result.data, null, 2));
+  try {
+    const result = await fal.subscribe('fal-ai/flux-2/klein/9b/edit', {
+      input: {
+        image_urls: [imageUrl],
+        prompt,
+      },
+      pollInterval: 500,
+      logs: true,
+    });
 
-  const data = result.data as { images?: Array<{ url: string }> };
-  const url = data.images?.[0]?.url;
-  if (!url) throw new Error('Fal.AI image generation returned no image URL');
-  return url;
+    console.log('[Fal.AI] Edit result:', JSON.stringify(result.data, null, 2));
+
+    const data = result.data as { images?: Array<{ url: string }> };
+    const url = data.images?.[0]?.url;
+    if (!url) throw new Error('Fal.AI image generation returned no image URL');
+    return url;
+  } catch (err: any) {
+    console.error('[Fal.AI] Edit request failed:', err.status, err.message);
+    if (err.status === 422) {
+      console.error('[Fal.AI] 422 Unprocessable Entity. The model may not accept the provided parameters, or the image_url is not publicly accessible.');
+    }
+    throw err;
+  }
 }

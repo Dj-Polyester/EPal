@@ -115,14 +115,32 @@ app.delete('/:id', async (c) => {
   if (!user) return c.json({ detail: 'Unauthorized' }, 401);
 
   const id = c.req.param('id');
+  console.log('[Character] Delete request for id:', id, 'user:', user.id);
 
+  // Delete related chats first (messages cascade via chat FK)
+  const { error: chatDeleteError } = await supabaseAdmin
+    .from('chats')
+    .delete()
+    .eq('character_id', id)
+    .eq('user_id', user.id);
+
+  if (chatDeleteError) {
+    console.error('[Character] Chat delete failed:', chatDeleteError.message);
+    return c.json({ detail: chatDeleteError.message, code: chatDeleteError.code }, 400);
+  }
+
+  // Delete the character
   const { error } = await supabaseAdmin
     .from('characters')
     .delete()
     .eq('id', id)
     .eq('user_id', user.id);
 
-  if (error) return c.json({ detail: error.message }, 400);
+  if (error) {
+    console.error('[Character] Delete failed:', error.message, error.code);
+    return c.json({ detail: error.message, code: error.code }, 400);
+  }
+  console.log('[Character] Delete success for id:', id);
   return c.json({ success: true });
 });
 

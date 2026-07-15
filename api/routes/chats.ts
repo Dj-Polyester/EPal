@@ -62,12 +62,13 @@ app.get('/:id', async (c) => {
 
   if (error || !data) return c.json({ detail: 'Chat not found' }, 404);
 
+  const character = (data.characters as any) || {};
   return c.json({
     id: data.id,
     character_id: data.character_id,
-    character_name: data.characters?.name || 'Unknown',
-    character_avatar_url: getPublicUrl(data.characters?.avatar_url || null),
-    character_personality: data.characters?.personality_prompt || null,
+    character_name: character.name || 'Unknown',
+    character_avatar_url: getPublicUrl(character.avatar_url || null),
+    character_personality: character.personality_prompt || null,
   });
 });
 

@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { Moon, Sun, ChevronRight, X } from 'lucide-react-native';
+import { Moon, Sun, ChevronRight, X, Send, MessageSquare } from 'lucide-react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -17,6 +17,10 @@ export default function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [theme, setLocalTheme] = useState<'light' | 'dark'>((user?.theme as 'light' | 'dark') ?? 'light');
   const [saving, setSaving] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   const getToken = async () => {
     const { data } = await import('../lib/supabase').then((m) => m.supabase.auth.getSession());
@@ -44,6 +48,34 @@ export default function SettingsScreen() {
       setTheme(theme);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSendFeedback = async () => {
+    if (!feedbackText.trim()) return;
+    setFeedbackLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: feedbackText.trim() }),
+      });
+      if (res.ok) {
+        setFeedbackSent(true);
+        setFeedbackText('');
+        setTimeout(() => {
+          setFeedbackOpen(false);
+          setFeedbackSent(false);
+        }, 1500);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setFeedbackLoading(false);
     }
   };
 
@@ -92,7 +124,71 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MessageSquare size={20} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Feedback</Text>
+          </View>
+          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+            Have suggestions or found a bug? Let us know!
+          </Text>
+          <TouchableOpacity
+            onPress={() => setFeedbackOpen(true)}
+            style={[styles.feedbackButton, { backgroundColor: colors.primary }]}
+          >
+            <Send size={16} color="#ffffff" />
+            <Text style={styles.feedbackButtonText}>Give Feedback</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <Modal visible={feedbackOpen} transparent animationType="slide" onRequestClose={() => setFeedbackOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Send Feedback</Text>
+              <TouchableOpacity onPress={() => setFeedbackOpen(false)} style={styles.closeButton}>
+                <X size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {feedbackSent ? (
+              <View style={styles.modalBody}>
+                <Text style={[styles.successText, { color: colors.primary }]}>
+                  Thank you! Your feedback has been sent.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.modalBody}>
+                <TextInput
+                  value={feedbackText}
+                  onChangeText={setFeedbackText}
+                  multiline
+                  numberOfLines={6}
+                  textAlignVertical="top"
+                  placeholder="Tell us what you think..."
+                  placeholderTextColor={colors.textMuted}
+                  style={[styles.feedbackInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surfaceAlt }]}
+                />
+                <TouchableOpacity
+                  onPress={handleSendFeedback}
+                  disabled={feedbackLoading || !feedbackText.trim()}
+                  style={[styles.sendFeedbackButton, { backgroundColor: colors.primary }, (!feedbackText.trim() || feedbackLoading) && styles.disabled]}
+                >
+                  {feedbackLoading ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.sendFeedbackButtonText}>Send Feedback</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -126,4 +222,50 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   themeText: { fontSize: 14, fontWeight: '500' },
+  divider: { height: 1, marginBottom: 28 },
+  feedbackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  feedbackButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+    minHeight: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '600' },
+  modalBody: { gap: 16 },
+  feedbackInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    height: 140,
+  },
+  sendFeedbackButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  sendFeedbackButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
+  disabled: { opacity: 0.5 },
+  successText: { fontSize: 16, fontWeight: '600', textAlign: 'center', marginTop: 20 },
 });

@@ -26,6 +26,23 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+function ThemeSync() {
+  const { user } = useAuth();
+  const { setTheme, isDark } = useTheme();
+
+  useEffect(() => {
+    const userTheme = user?.theme as 'light' | 'dark' | undefined;
+    if (userTheme && (userTheme === 'light' || userTheme === 'dark')) {
+      const wantsDark = userTheme === 'dark';
+      if (wantsDark !== isDark) {
+        setTheme(userTheme);
+      }
+    }
+  }, [user?.theme]);
+
+  return null;
+}
+
 function AppNavigator() {
   const { user, loading } = useAuth();
   const { isDark } = useTheme();
@@ -38,6 +55,7 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
+      <ThemeSync />
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack.Navigator
         screenOptions={{

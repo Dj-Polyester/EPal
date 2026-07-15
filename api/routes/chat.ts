@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { supabaseAdmin } from '../lib/supabase';
 import { openai, DEEPSEEK_MODEL } from '../lib/openai';
 import { generateImageFromPrompt } from '../lib/fal';
-import { uploadImageFromUrl } from '../lib/r2';
+import { uploadImageFromUrl, getPublicUrl } from '../lib/r2';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 const app = new Hono();
@@ -39,7 +39,7 @@ app.post('/respond', async (c) => {
   // Get user profile
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('bio')
+    .select('bio, username')
     .eq('id', user.id)
     .single();
 
@@ -62,15 +62,28 @@ app.post('/respond', async (c) => {
     .reverse()
     .map((m) => ({ role: m.role as any, content: m.content }));
 
+  const avatarUrl = getPublicUrl(character.avatar_url) || 'No avatar available.';
+
+  const userName = profile?.username || 'the user';
+
   const systemPrompt = `You are ${character.name}. ${character.personality_prompt}
 
+User name: ${userName}
 User bio: ${profile?.bio || 'No bio provided.'}
+
+Your visual appearance is captured in your avatar image at: ${avatarUrl}
+When generating images, you MUST describe yourself consistently with this appearance.
 
 Rules:
 - Always stay in character. Reflect your personality in every response.
 - Remember past events from the conversation.
+- Address the user by their name when appropriate.
 - Only call generate_image when the user EXPLICITLY asks for a picture or image of you or something visual related to you.
-- If you call generate_image, provide a detailed, context-aware prompt based on the chat history and your character traits.
+- If you call generate_image, provide a detailed scene prompt based on:
+  1. The chat history and current context
+  2. Your character traits and personality
+  3. Your visual appearance (consistent with your avatar)
+  The prompt should describe a scene, pose, or situation — not just repeat your base description.
 - If the generate_image tool returns an error, you MUST decline the request gracefully in your own character style. Do not mention technical errors; just say you cannot share such an image right now.
 - Never generate images unless explicitly requested by the user.`;
 
@@ -84,13 +97,13 @@ Rules:
       type: 'function' as const,
       function: {
         name: 'generate_image',
-        description: 'Generate an image of the character using the character avatar as style reference. Only use when the user explicitly requests a picture.',
+        description: 'Generate an image of the character in a specific scene or situation. Only use when the user explicitly requests a picture. The prompt must describe a scene/context, not just the character base appearance.',
         parameters: {
           type: 'object',
           properties: {
             prompt: {
               type: 'string',
-              description: 'Detailed image generation prompt based on chat context and character traits',
+              description: 'A detailed scene description for image generation. Include: the situation/setting, character pose/action, mood/atmosphere, and visual details consistent with the character avatar. Example: "A cheerful bard playing a glowing lute under a starry night sky, cosmic sparkles around them, fantasy digital art style"',
             },
           },
           required: ['prompt'],
@@ -149,15 +162,17 @@ Rules:
 
       let imageUrl: string | null = null;
       try {
-        if (toolArgs.prompt && character.avatar_url) {
-          const falUrl = await generateImageFromPrompt(toolArgs.prompt, character.avatar_url);
+        const publicAvatarUrl = getPublicUrl(character.avatar_url);
+        if (toolArgs.prompt && publicAvatarUrl) {
+          console.log('[Chat] Using public avatar URL for img2img:', publicAvatarUrl);
+          const falUrl = await generateImageFromPrompt(toolArgs.prompt, publicAvatarUrl);
           const key = `generated/${user.id}/${chat_id}/${Date.now()}.png`;
           imageUrl = await uploadImageFromUrl(falUrl, key);
         } else {
           throw new Error('Missing prompt or avatar');
         }
       } catch (err: any) {
-        console.error('Image generation failed:', err.message);
+        console.error('[Chat] Image generation failed:', err.status, err.message);
         toolResultMessages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
