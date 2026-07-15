@@ -14,7 +14,7 @@ A cross-platform mobile application where users can create virtual AI characters
 - **Image generation** — when a user explicitly requests a picture, DeepSeek composes a scene prompt and invokes Fal.AI FLUX 2 Klein 9B Edit (img2img) using the character avatar as reference
 - **Graceful decline** — if image generation fails, the character declines in their own speaking style
 - **Real-time messaging** via Supabase Realtime
-- **Dark mode** settings persisted per user
+- **Dark mode** settings persisted per user, with a "System" option that follows the device theme
 - **In-app feedback** — users can send feedback directly to the team via email (powered by Resend)
 
 ## Project Structure
@@ -85,7 +85,7 @@ create table if not exists public.profiles (
   username text unique,
   bio text,
   onboarding_completed boolean not null default false,
-  theme text not null default 'light',
+  theme text not null default 'system',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -177,7 +177,7 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, username, onboarding_completed, theme)
-  values (new.id, null, false, 'light');
+  values (new.id, null, false, 'system');
   return new;
 end;
 $$ language plpgsql security definer;
@@ -282,8 +282,9 @@ Then press `w` to open in the browser, or scan the QR code with the **Expo Go** 
    - Verify the character declines naturally
 
 6. **Settings**
-   - Switch between light and dark themes
-   - Verify changes persist after restart
+    - Switch between Light, Dark, and System themes
+    - With System selected, toggle the device dark mode and verify the app follows
+    - Verify changes persist after restart
 
 7. **Feedback**
     - Go to Settings and tap "Give Feedback"

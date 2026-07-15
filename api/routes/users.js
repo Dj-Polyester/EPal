@@ -64,7 +64,7 @@ app.patch('/settings', async (c) => {
         return c.json({ detail: 'Unauthorized' }, 401);
     const body = await c.req.json();
     const updates = {};
-    if (body.theme === 'light' || body.theme === 'dark')
+    if (body.theme === 'light' || body.theme === 'dark' || body.theme === 'system')
         updates.theme = body.theme;
     const { error } = await supabaseAdmin
         .from('profiles')

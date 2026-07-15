@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { Moon, Sun, ChevronRight, X, Send, MessageSquare } from 'lucide-react-native';
+import { Moon, Sun, Monitor, ChevronRight, X, Send, MessageSquare } from 'lucide-react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -14,9 +14,9 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 
 export default function SettingsScreen() {
   const { user, refreshUser } = useAuth();
-  const { isDark, setTheme, colors } = useTheme();
+  const { setTheme, colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const [theme, setLocalTheme] = useState<'light' | 'dark'>((user?.theme as 'light' | 'dark') ?? 'light');
+  const [theme, setLocalTheme] = useState<'light' | 'dark' | 'system'>((user?.theme as 'light' | 'dark' | 'system') ?? 'system');
   const [saving, setSaving] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
@@ -28,7 +28,7 @@ export default function SettingsScreen() {
     return data.session?.access_token || '';
   };
 
-  const handleThemeChange = async (next: 'light' | 'dark') => {
+  const handleThemeChange = async (next: 'light' | 'dark' | 'system') => {
     if (next === theme) return;
     setLocalTheme(next);
     setTheme(next);
@@ -122,6 +122,18 @@ export default function SettingsScreen() {
               <Moon size={20} color={colors.text} />
               <Text style={[styles.themeText, { color: colors.text }]}>Dark</Text>
               {theme === 'dark' && <ChevronRight size={16} color={colors.primary} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleThemeChange('system')}
+              style={[
+                styles.themeButton,
+                { borderColor: theme === 'system' ? colors.primary : colors.border },
+                theme === 'system' && { backgroundColor: colors.primaryLight },
+              ]}
+            >
+              <Monitor size={20} color={colors.text} />
+              <Text style={[styles.themeText, { color: colors.text }]}>System</Text>
+              {theme === 'system' && <ChevronRight size={16} color={colors.primary} />}
             </TouchableOpacity>
           </View>
         </View>

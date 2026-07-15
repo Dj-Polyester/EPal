@@ -1,5 +1,8 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export type ThemePreference = 'light' | 'dark' | 'system';
 
 interface ThemeColors {
   background: string;
@@ -41,36 +44,61 @@ const darkColors: ThemeColors = {
 };
 
 interface ThemeContextType {
+  theme: ThemePreference;
   isDark: boolean;
   colors: ThemeColors;
-  setTheme: (theme: 'light' | 'dark') => void;
+  setTheme: (theme: ThemePreference) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function resolveIsDark(preference: ThemePreference): boolean {
+  if (preference === 'light') return false;
+  if (preference === 'dark') return true;
+  return Appearance.getColorScheme() === 'dark';
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<ThemePreference>('system');
   const [isDark, setIsDark] = useState(false);
   const [ready, setReady] = useState(false);
+
+  const applyTheme = useCallback((next: ThemePreference) => {
+    setThemeState(next);
+    setIsDark(resolveIsDark(next));
+  }, []);
 
   // Load persisted theme on mount
   useEffect(() => {
     (async () => {
       try {
         const stored = await AsyncStorage.getItem('epal_theme');
-        if (stored === 'dark') setIsDark(true);
-        else if (stored === 'light') setIsDark(false);
+        const parsed: ThemePreference =
+          stored === 'light' || stored === 'dark' || stored === 'system'
+            ? stored
+            : 'system';
+        applyTheme(parsed);
       } catch {
-        // ignore
+        applyTheme('system');
       } finally {
         setReady(true);
       }
     })();
-  }, []);
+  }, [applyTheme]);
 
-  const setTheme = async (theme: 'light' | 'dark') => {
-    setIsDark(theme === 'dark');
+  // Listen to system theme changes when preference is 'system'
+  useEffect(() => {
+    if (theme !== 'system') return;
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setIsDark(colorScheme === 'dark');
+    });
+    return () => subscription.remove();
+  }, [theme]);
+
+  const setTheme = async (next: ThemePreference) => {
+    applyTheme(next);
     try {
-      await AsyncStorage.setItem('epal_theme', theme);
+      await AsyncStorage.setItem('epal_theme', next);
     } catch {
       // ignore
     }
@@ -79,7 +107,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   if (!ready) return null;
 
   return (
-    <ThemeContext.Provider value={{ isDark, colors: isDark ? darkColors : lightColors, setTheme }}>
+    <ThemeContext.Provider value={{ theme, isDark, colors: isDark ? darkColors : lightColors, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

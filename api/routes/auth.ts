@@ -9,7 +9,7 @@ async function ensureProfile(userId: string) {
     .select('id')
     .eq('id', userId);
 
-  if (!profiles || profiles.length === 0) {
+    if (!profiles || profiles.length === 0) {
     const { error: insertError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -17,7 +17,7 @@ async function ensureProfile(userId: string) {
         username: null,
         bio: null,
         onboarding_completed: false,
-        theme: 'light',
+        theme: 'system',
       });
 
     if (insertError) {

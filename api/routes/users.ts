@@ -71,7 +71,7 @@ app.patch('/settings', async (c) => {
 
   const body = await c.req.json();
   const updates: Record<string, unknown> = {};
-  if (body.theme === 'light' || body.theme === 'dark') updates.theme = body.theme;
+  if (body.theme === 'light' || body.theme === 'dark' || body.theme === 'system') updates.theme = body.theme;
 
   const { error } = await supabaseAdmin
     .from('profiles')

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import type { ThemePreference } from './src/context/ThemeContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import NameSetupScreen from './src/screens/NameSetupScreen';
@@ -29,17 +30,15 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function ThemeSync() {
   const { user } = useAuth();
-  const { setTheme, isDark } = useTheme();
+  const { setTheme } = useTheme();
 
   useEffect(() => {
-    const userTheme = user?.theme as 'light' | 'dark' | undefined;
-    if (userTheme && (userTheme === 'light' || userTheme === 'dark')) {
-      const wantsDark = userTheme === 'dark';
-      if (wantsDark !== isDark) {
-        setTheme(userTheme);
-      }
+    const userTheme = user?.theme as ThemePreference | undefined;
+    if (userTheme && ['light', 'dark', 'system'].includes(userTheme)) {
+      console.log('[ThemeSync] Applying server theme:', userTheme);
+      setTheme(userTheme);
     }
-  }, [user?.theme]);
+  }, [user?.theme, setTheme]);
 
   return null;
 }

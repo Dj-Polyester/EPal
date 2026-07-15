@@ -14,7 +14,7 @@ async function ensureProfile(userId) {
             username: null,
             bio: null,
             onboarding_completed: false,
-            theme: 'light',
+            theme: 'system',
         });
         if (insertError) {
             console.error('Profile insert failed:', insertError.message);
