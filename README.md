@@ -7,7 +7,7 @@ A cross-platform mobile application where users can create virtual AI characters
 - **Authentication** via Supabase Auth (email + password)
 - **Name setup** — users choose a name for characters to address them by
 - **Skippable onboarding** — users can share a bio so characters remember them
-- **Character creation** with auto-generated avatars via Fal.AI FLUX 1 Schnell
+- **Character creation** with auto-generated avatars via Fal.AI FLUX 1 Schnell (or FLUX 2 Klein Edit when a reference image is provided)
 - **Prompt randomization** for users who don't know what character to create
 - **Multi-chat support** — each character has its own chat thread
 - **Personality-driven responses** — DeepSeek-Chat stays in character using system prompts
@@ -56,6 +56,8 @@ R2_BUCKET_NAME=your-bucket-name
 R2_PUBLIC_DOMAIN=
 # Resend API key for feedback emails
 RESEND_API_KEY=your-resend-key
+# Email address to receive feedback submissions
+FEEDBACK_EMAIL=eeeeeepal@gmail.com
 ```
 
 ### App (`app/.env`)
@@ -266,8 +268,9 @@ Then press `w` to open in the browser, or scan the QR code with the **Expo Go** 
 4. **Character Creation**
    - Tap "New Character"
    - Enter a name and personality
+   - Optionally tap "Upload Reference Image" and pick a photo
    - Tap "Create Character & Start Chat"
-   - Verify an avatar is auto-generated
+   - Verify an avatar is auto-generated (using FLUX 2 Klein Edit if reference image was provided, otherwise FLUX 1 Schnell)
    - Go back and tap "Randomize" to test prompt randomization
 
 5. **Chat**
@@ -356,7 +359,7 @@ npm run build:app -- --platform android   # or --platform ios
 
 | Layer | Technology |
 |-------|-----------|
-| Mobile App | Expo, React Native, TypeScript, React Navigation |
+| Mobile App | Expo SDK 54, React Native 0.81, TypeScript, React Navigation |
 | API | Vercel Edge Functions, Hono, TypeScript |
 | Auth & Database | Supabase (PostgreSQL + Auth + Realtime) |
 | LLM | DeepSeek-Chat via OpenAI-compatible API |
@@ -371,6 +374,7 @@ npm run build:app -- --platform android   # or --platform ios
 - **Never commit `.env` or `.env.local` files.** Add them to `.gitignore`.
 - The API uses **function calling** with DeepSeek. Only when the user explicitly requests a picture of the character does the `generate_image` tool fire.
 - **Img2img** uses Fal.AI FLUX 2 Klein 9B Edit with the character's stored `avatar_url` as the image reference and a prompt composed by DeepSeek based on chat context.
+- Reference images are uploaded to R2 via the `/api/upload` endpoint before being passed to Fal.AI for avatar generation.
 - If Fal.AI or R2 fails during image generation, the tool returns an error to DeepSeek, which then generates a natural, in-character decline response.
 - All database queries enforce **Row Level Security** so users can only access their own data.
 - The dev server loads `.env.local` with `override: true` behavior (forced via `dotenv.parse`) so `.env.local` always takes precedence over shell env vars.

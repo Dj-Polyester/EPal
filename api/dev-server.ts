@@ -35,6 +35,8 @@ import characterRoutes from './routes/characters';
 import chatRoutes from './routes/chats';
 import respondRoute from './routes/chat';
 import feedbackRoutes from './routes/feedback';
+import uploadRoutes from './routes/upload';
+import imageProxyRoutes from './routes/images';
 
 const app = new Hono().basePath('/api');
 
@@ -50,6 +52,8 @@ app.route('/characters', characterRoutes);
 app.route('/chats', chatRoutes);
 app.route('/chat', respondRoute);
 app.route('/feedback', feedbackRoutes);
+app.route('/upload', uploadRoutes);
+app.route('/images', imageProxyRoutes);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 

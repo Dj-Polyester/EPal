@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image, Alert, Platform } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { proxyImageUrl } from '../lib/images';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { Plus, MessageCircle, User, LogOut, Settings, Trash2 } from 'lucide-react-native';
@@ -55,13 +57,7 @@ export default function DashboardScreen() {
     }, [])
   );
 
-  const handleDelete = async (chat: ChatItem) => {
-    const confirmed = typeof window !== 'undefined'
-      ? window.confirm(`Delete "${chat.character_name}" and all their chats?`)
-      : true;
-
-    if (!confirmed) return;
-
+  const doDelete = async (chat: ChatItem) => {
     try {
       const token = await getToken();
       console.log('[Dashboard] Deleting character:', chat.character_id);
@@ -80,6 +76,22 @@ export default function DashboardScreen() {
     } catch (err: any) {
       console.error('[Dashboard] Delete error:', err);
       Alert.alert('Error', 'Failed to delete character');
+    }
+  };
+
+  const handleDelete = (chat: ChatItem) => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Delete "${chat.character_name}" and all their chats?`);
+      if (confirmed) doDelete(chat);
+    } else {
+      Alert.alert(
+        'Delete Character',
+        `Delete "${chat.character_name}" and all their chats? This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => doDelete(chat) },
+        ]
+      );
     }
   };
 
@@ -103,7 +115,7 @@ export default function DashboardScreen() {
             <View style={[styles.avatar, { backgroundColor: colors.primaryLight }]}>
               {hasAvatar ? (
                 <Image
-                  source={{ uri: item.character_avatar_url! }}
+                  source={{ uri: proxyImageUrl(item.character_avatar_url) || '' }}
                   style={styles.avatarImage}
                   resizeMode="cover"
                   onError={() => {
@@ -143,7 +155,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.primary }]}>EPal</Text>
         <View style={styles.headerActions}>
@@ -195,7 +207,7 @@ export default function DashboardScreen() {
           />
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

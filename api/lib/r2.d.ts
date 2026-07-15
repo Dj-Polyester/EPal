@@ -1,4 +1,5 @@
 export declare function isR2Configured(): boolean;
+export declare function uploadBase64Image(base64: string, key: string): Promise<string>;
 export declare function uploadImageFromUrl(imageUrl: string, key: string): Promise<string>;
 export declare function getSignedImageUrl(key: string): Promise<string>;
 /**

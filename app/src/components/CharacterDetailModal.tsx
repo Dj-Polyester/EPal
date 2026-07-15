@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { proxyImageUrl } from '../lib/images';
 import { X, User } from 'lucide-react-native';
 
 interface Props {
@@ -22,7 +23,7 @@ export default function CharacterDetailModal({ open, onClose, name, avatarUrl, p
           <View style={[styles.imageArea, { backgroundColor: colors.primaryLight }]}>
             {avatarUrl && !imgError ? (
               <Image
-                source={{ uri: avatarUrl }}
+                source={{ uri: proxyImageUrl(avatarUrl) || '' }}
                 style={styles.image}
                 resizeMode="cover"
                 onError={() => {

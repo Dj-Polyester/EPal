@@ -13,8 +13,30 @@ function configureFal() {
   fal.config({ credentials: key });
 }
 
-export async function generateAvatar(prompt: string): Promise<string> {
+export async function generateAvatar(
+  prompt: string,
+  referenceImageUrl?: string
+): Promise<string> {
   configureFal();
+
+  if (referenceImageUrl) {
+    console.log('[Fal.AI] Generating avatar with reference image using flux-2/klein...');
+    const result = await fal.subscribe('fal-ai/flux-2/klein/9b/edit', {
+      input: {
+        image_urls: [referenceImageUrl],
+        prompt: `Portrait avatar of a fictional character. Keep the face and general appearance consistent with the reference image. ${prompt}`,
+      },
+      pollInterval: 500,
+      logs: true,
+    });
+
+    console.log('[Fal.AI] Avatar (ref) result:', JSON.stringify(result.data, null, 2));
+
+    const data = result.data as { images?: Array<{ url: string }> };
+    const url = data.images?.[0]?.url;
+    if (!url) throw new Error('Fal.AI avatar generation returned no image URL');
+    return url;
+  }
 
   const result = await fal.subscribe('fal-ai/flux/schnell', {
     input: {

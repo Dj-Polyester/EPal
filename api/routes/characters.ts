@@ -49,7 +49,7 @@ app.post('/', async (c) => {
   const user = await getUserFromToken(token);
   if (!user) return c.json({ detail: 'Unauthorized' }, 401);
 
-  const { name, personality_prompt } = await c.req.json();
+  const { name, personality_prompt, reference_image_url } = await c.req.json();
   if (!name?.trim() || !personality_prompt?.trim()) {
     return c.json({ detail: 'Name and personality required' }, 400);
   }
@@ -58,7 +58,7 @@ app.post('/', async (c) => {
   let avatarUrl: string | null = null;
   try {
     console.log('[Character] Generating avatar with Fal.AI...');
-    const falUrl = await generateAvatar(personality_prompt.trim());
+    const falUrl = await generateAvatar(personality_prompt.trim(), reference_image_url);
     console.log('[Character] Fal.AI generated URL:', falUrl);
 
     if (isR2Configured()) {

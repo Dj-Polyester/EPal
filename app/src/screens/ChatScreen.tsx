@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Image, K
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { proxyImageUrl } from '../lib/images';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import CharacterDetailModal from '../components/CharacterDetailModal';
@@ -148,7 +150,7 @@ export default function ChatScreen() {
           <TouchableOpacity onPress={() => setDetailOpen(true)} style={styles.smallAvatar}>
             {avatarUrl && !headerImgError ? (
               <Image
-                source={{ uri: avatarUrl }}
+                source={{ uri: proxyImageUrl(avatarUrl) || '' }}
                 style={styles.smallAvatarImage}
                 resizeMode="cover"
                 onError={() => setHeaderImgError(true)}
@@ -171,7 +173,7 @@ export default function ChatScreen() {
           </Text>
           {item.media_url && item.media_type === 'image' && (
             <Image
-              source={{ uri: item.media_url }}
+              source={{ uri: proxyImageUrl(item.media_url) || '' }}
               style={styles.mediaImage}
               resizeMode="cover"
               onError={() => console.log('[Chat] Media image failed to load:', item.media_url)}
@@ -186,11 +188,12 @@ export default function ChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.background }]}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom', 'left', 'right']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[styles.container, { backgroundColor: colors.background }]}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft size={22} color={colors.textMuted} />
@@ -199,7 +202,7 @@ export default function ChatScreen() {
           <View style={[styles.headerAvatar, { backgroundColor: colors.primaryLight }]}>
             {avatarUrl && !headerImgError ? (
               <Image
-                source={{ uri: avatarUrl }}
+                source={{ uri: proxyImageUrl(avatarUrl) || '' }}
                 style={styles.headerAvatarImage}
                 resizeMode="cover"
                 onError={() => {
@@ -242,7 +245,7 @@ export default function ChatScreen() {
           <View style={[styles.smallAvatar, { backgroundColor: colors.primaryLight }]}>
             {avatarUrl && !headerImgError ? (
               <Image
-                source={{ uri: avatarUrl }}
+                source={{ uri: proxyImageUrl(avatarUrl) || '' }}
                 style={styles.smallAvatarImage}
                 resizeMode="cover"
                 onError={() => setHeaderImgError(true)}
@@ -291,6 +294,7 @@ export default function ChatScreen() {
         personality={personality}
       />
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

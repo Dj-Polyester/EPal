@@ -24,6 +24,31 @@ export function isR2Configured() {
         r2SecretAccessKey &&
         r2BucketName);
 }
+export async function uploadBase64Image(base64, key) {
+    const s3 = getS3Client();
+    if (!s3) {
+        throw new Error('R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_BUCKET_NAME.');
+    }
+    // Extract content type from data URI if present
+    const match = base64.match(/^data:(.+);base64,/);
+    let contentType = 'image/png';
+    let rawBase64 = base64;
+    if (match) {
+        contentType = match[1];
+        rawBase64 = base64.slice(match[0].length);
+    }
+    const buffer = Buffer.from(rawBase64, 'base64');
+    await s3.send(new PutObjectCommand({
+        Bucket: r2BucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+    }));
+    if (r2PublicDomain) {
+        return `${r2PublicDomain}/${key}`;
+    }
+    return `https://${r2AccountId}.r2.cloudflarestorage.com/${r2BucketName}/${key}`;
+}
 export async function uploadImageFromUrl(imageUrl, key) {
     const s3 = getS3Client();
     if (!s3) {

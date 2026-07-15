@@ -2,8 +2,12 @@ import { Hono } from 'hono';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '../lib/supabase';
 const resendApiKey = process.env.RESEND_API_KEY || '';
+const feedbackEmail = process.env.FEEDBACK_EMAIL || '';
 if (!resendApiKey) {
     console.warn('[Feedback] RESEND_API_KEY not set. Feedback emails will fail.');
+}
+if (!feedbackEmail) {
+    console.warn('[Feedback] FEEDBACK_EMAIL not set. Feedback emails will fail.');
 }
 const resend = new Resend(resendApiKey);
 const app = new Hono();
@@ -16,13 +20,13 @@ app.post('/', async (c) => {
     const { message } = await c.req.json();
     if (!message?.trim())
         return c.json({ detail: 'Message required' }, 400);
-    if (!resendApiKey) {
+    if (!resendApiKey || !feedbackEmail) {
         return c.json({ detail: 'Feedback service not configured' }, 500);
     }
     try {
         const { data, error: sendError } = await resend.emails.send({
             from: 'onboarding@resend.dev',
-            to: 'eeeeeepal@gmail.com',
+            to: feedbackEmail,
             subject: `EPal Feedback from ${userData.user.email}`,
             html: `<p><strong>User:</strong> ${userData.user.email}</p><p><strong>Feedback:</strong></p><p>${message.trim().replace(/\n/g, '<br>')}</p>`,
         });
