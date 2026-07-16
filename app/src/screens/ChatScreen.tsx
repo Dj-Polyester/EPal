@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import CharacterDetailModal from '../components/CharacterDetailModal';
+import ImagePreviewModal from '../components/ImagePreviewModal';
 import TypingIndicator from '../components/TypingIndicator';
 import { ArrowLeft, Send, User } from 'lucide-react-native';
 
@@ -38,6 +39,8 @@ export default function ChatScreen() {
   const [personality, setPersonality] = useState<string | null>(null);
   const [headerImgError, setHeaderImgError] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -172,12 +175,20 @@ export default function ChatScreen() {
             {item.content}
           </Text>
           {item.media_url && item.media_type === 'image' && (
-            <Image
-              source={{ uri: proxyImageUrl(item.media_url) || '' }}
-              style={styles.mediaImage}
-              resizeMode="cover"
-              onError={() => console.log('[Chat] Media image failed to load:', item.media_url)}
-            />
+            <TouchableOpacity
+              onPress={() => {
+                setPreviewUrl(item.media_url);
+                setPreviewOpen(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: proxyImageUrl(item.media_url) || '' }}
+                style={styles.mediaImage}
+                resizeMode="cover"
+                onError={() => console.log('[Chat] Media image failed to load:', item.media_url)}
+              />
+            </TouchableOpacity>
           )}
           <Text style={[styles.timeText, { color: isUser ? 'rgba(255,255,255,0.7)' : colors.textMuted }]}>
             {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -292,6 +303,15 @@ export default function ChatScreen() {
         name={characterName}
         avatarUrl={avatarUrl}
         personality={personality}
+      />
+
+      <ImagePreviewModal
+        open={previewOpen}
+        imageUrl={previewUrl}
+        onClose={() => {
+          setPreviewOpen(false);
+          setPreviewUrl(null);
+        }}
       />
     </KeyboardAvoidingView>
     </SafeAreaView>

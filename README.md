@@ -74,6 +74,24 @@ EXPO_PUBLIC_API_URL=https://your-vercel-deployment.vercel.app
 
 In your Supabase project, go to **Authentication > Providers** and ensure **Email** provider is enabled. Disable "Confirm email" if you want immediate access during development.
 
+#### Google OAuth (optional)
+
+For Google Sign-In:
+
+1. Go to **Authentication > Providers** in Supabase
+2. Enable **Google**
+3. Set your **Google Client ID** and **Client Secret** (from Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs)
+4. Add your redirect URL to the authorized redirect URIs:
+   - For Expo Go development: `https://auth.expo.io/@your-username/epal`
+   - For production builds: `epal://` (or your custom scheme)
+   - For web: `http://localhost:8081` (dev) or your production URL
+5. In Google Cloud Console, add your redirect URLs to the **Authorized redirect URIs** list for the OAuth client
+
+**Note:** In Supabase Dashboard, under Google provider settings, add:
+- `https://<your-project>.supabase.co/auth/v1/callback` (Supabase handles the exchange)
+
+The app uses `expo-web-browser` and `expo-auth-session` to open the Google consent screen in an in-app browser.
+
 ### 2. Run Migrations
 
 In the Supabase SQL Editor, run:

@@ -9,6 +9,7 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 export default function NameSetupScreen() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const { refreshUser } = useAuth();
   const { colors } = useTheme();
 
@@ -19,9 +20,11 @@ export default function NameSetupScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) return;
+    setError('');
     setLoading(true);
     try {
       const token = await getToken();
+      console.log('[NameSetup] Saving name with token:', token ? 'present' : 'missing');
       const res = await fetch(`${API_BASE}/api/users/name`, {
         method: 'POST',
         headers: {
@@ -30,11 +33,18 @@ export default function NameSetupScreen() {
         },
         body: JSON.stringify({ name: name.trim() }),
       });
+      console.log('[NameSetup] API response status:', res.status);
       if (res.ok) {
+        console.log('[NameSetup] Name saved, refreshing user...');
         await refreshUser();
+      } else {
+        const data = await res.json();
+        console.error('[NameSetup] API error:', data);
+        setError(data.detail || 'Failed to save name. Please try again.');
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      console.error('[NameSetup] Network error:', err);
+      setError('Network error. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -51,6 +61,12 @@ export default function NameSetupScreen() {
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           Your characters will use this name when they talk to you.
         </Text>
+
+        {error ? (
+          <View style={[styles.errorBox, { backgroundColor: colors.dangerBg }]}>
+            <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: colors.text }]}>Your name</Text>
@@ -97,6 +113,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 20,
     lineHeight: 20,
+  },
+  errorBox: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 13,
   },
   field: {
     marginBottom: 16,

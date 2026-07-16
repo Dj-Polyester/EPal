@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import GoogleIcon from '../components/GoogleIcon';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 
@@ -13,7 +14,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, signInWithGoogle } = useAuth();
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
 
@@ -23,6 +25,21 @@ export default function LoginScreen() {
       await login(email, password);
     } catch (err: any) {
       setError(err.message || 'Login failed');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      console.error('[LoginScreen] Google sign-in error:', err);
+      if (err.message !== 'Sign-in cancelled' && err.message !== 'Sign-in dismissed') {
+        setError(err.message || 'Google sign-in failed. Check Metro logs for details.');
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -67,6 +84,23 @@ export default function LoginScreen() {
 
         <TouchableOpacity onPress={handleSubmit} style={[styles.button, { backgroundColor: colors.primary }]}>
           <Text style={styles.buttonText}>Sign In</Text>
+        </TouchableOpacity>
+
+        <View style={styles.divider}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerText, { color: colors.textMuted }]}>or</Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        </View>
+
+        <TouchableOpacity
+          onPress={handleGoogleSignIn}
+          disabled={googleLoading}
+          style={[styles.googleButton, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+        >
+          {!googleLoading && <GoogleIcon size={20} />}
+          <Text style={[styles.googleButtonText, { color: colors.text }]}>
+            {googleLoading ? 'Signing in...' : 'Sign in with Google'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.linkRow}>
@@ -142,5 +176,32 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 13,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  googleButtonText: {
+    fontWeight: '600',
+    fontSize: 15,
   },
 });

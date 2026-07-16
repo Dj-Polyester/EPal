@@ -4,27 +4,29 @@ import { supabaseAdmin } from '../lib/supabase';
 const app = new Hono();
 
 async function ensureProfile(userId: string) {
-  const { data: profiles } = await supabaseAdmin
+  // Only INSERT if the profile doesn't exist — never UPDATE existing rows
+  const { data: existing } = await supabaseAdmin
     .from('profiles')
     .select('id')
-    .eq('id', userId);
+    .eq('id', userId)
+    .maybeSingle();
 
-    if (!profiles || profiles.length === 0) {
-    const { error: insertError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: userId,
-        username: null,
-        bio: null,
-        onboarding_completed: false,
-        theme: 'system',
-      });
+  if (existing) return; // Profile already exists, don't touch it
 
-    if (insertError) {
-      console.error('Profile insert failed:', insertError.message);
-      if (insertError.message.includes('permission denied')) {
-        console.error('HINT: Your SUPABASE_SECRET_KEY may be a publishable key. Use the service_role key from Supabase Dashboard > Project Settings > API.');
-      }
+  const { error: insertError } = await supabaseAdmin
+    .from('profiles')
+    .insert({
+      id: userId,
+      username: null,
+      bio: null,
+      onboarding_completed: false,
+      theme: 'system',
+    });
+
+  if (insertError) {
+    console.error('[Auth] Profile insert failed:', insertError.message);
+    if (insertError.message.includes('permission denied')) {
+      console.error('HINT: Your SUPABASE_SECRET_KEY may be a publishable key. Use the service_role key from Supabase Dashboard > Project Settings > API.');
     }
   }
 }

@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { Moon, Sun, Monitor, ChevronRight, X, Send, MessageSquare } from 'lucide-react-native';
+import { Moon, Sun, Monitor, ChevronRight, X, Send, MessageSquare, User, Save } from 'lucide-react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -18,6 +18,9 @@ export default function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [theme, setLocalTheme] = useState<'light' | 'dark' | 'system'>((user?.theme as 'light' | 'dark' | 'system') ?? 'system');
   const [saving, setSaving] = useState(false);
+  const [name, setName] = useState(user?.username || '');
+  const [nameError, setNameError] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackLoading, setFeedbackLoading] = useState(false);
@@ -49,6 +52,36 @@ export default function SettingsScreen() {
       setTheme(theme);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!name.trim()) {
+      setNameError('Name cannot be empty');
+      return;
+    }
+    setNameError('');
+    setNameSaving(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/users/name`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (res.ok) {
+        await refreshUser();
+      } else {
+        const data = await res.json();
+        setNameError(data.detail || 'Failed to save name');
+      }
+    } catch {
+      setNameError('Network error. Please try again.');
+    } finally {
+      setNameSaving(false);
     }
   };
 
@@ -136,6 +169,42 @@ export default function SettingsScreen() {
               {theme === 'system' && <ChevronRight size={16} color={colors.primary} />}
             </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <User size={20} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Name</Text>
+          </View>
+          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+            This is how your characters will address you.
+          </Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.nameInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surfaceAlt }]}
+          />
+          {nameError ? (
+            <Text style={[styles.nameError, { color: colors.danger }]}>{nameError}</Text>
+          ) : null}
+          <TouchableOpacity
+            onPress={handleSaveName}
+            disabled={nameSaving || !name.trim()}
+            style={[styles.saveNameButton, { backgroundColor: colors.primary }, (!name.trim() || nameSaving) && styles.disabled]}
+          >
+            {nameSaving ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <>
+                <Save size={16} color="#ffffff" />
+                <Text style={styles.saveNameText}>Save Name</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -236,6 +305,27 @@ const styles = StyleSheet.create({
   },
   themeText: { fontSize: 14, fontWeight: '500' },
   divider: { height: 1, marginBottom: 28 },
+  nameInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  nameError: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  saveNameButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  saveNameText: { color: '#ffffff', fontWeight: '600', fontSize: 14 },
   feedbackButton: {
     flexDirection: 'row',
     alignItems: 'center',
