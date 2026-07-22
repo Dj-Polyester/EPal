@@ -7,7 +7,7 @@ import { proxyImageUrl } from '../lib/images';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { Plus, MessageCircle, User, LogOut, Settings, Trash2 } from 'lucide-react-native';
+import { MessageCircle, User, LogOut, Settings, Trash2 } from 'lucide-react-native';
 
 interface ChatItem {
   id: string;
@@ -22,7 +22,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 
-export default function DashboardScreen() {
+export default function ChatsScreen() {
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, logout } = useAuth();
@@ -60,33 +60,29 @@ export default function DashboardScreen() {
   const doDelete = async (chat: ChatItem) => {
     try {
       const token = await getToken();
-      console.log('[Dashboard] Deleting character:', chat.character_id);
-      const res = await fetch(`${API_BASE}/api/characters/${chat.character_id}`, {
+      const res = await fetch(`${API_BASE}/api/chats/${chat.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        console.log('[Dashboard] Delete success');
-        setChats((prev) => prev.filter((c) => c.character_id !== chat.character_id));
+        setChats((prev) => prev.filter((c) => c.id !== chat.id));
       } else {
         const data = await res.json();
-        console.error('[Dashboard] Delete failed:', data);
-        Alert.alert('Error', data.detail || 'Failed to delete character');
+        Alert.alert('Error', data.detail || 'Failed to delete');
       }
-    } catch (err: any) {
-      console.error('[Dashboard] Delete error:', err);
-      Alert.alert('Error', 'Failed to delete character');
+    } catch {
+      Alert.alert('Error', 'Failed to delete');
     }
   };
 
   const handleDelete = (chat: ChatItem) => {
     if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`Delete "${chat.character_name}" and all their chats?`);
+      const confirmed = window.confirm(`Delete chat with "${chat.character_name}"?`);
       if (confirmed) doDelete(chat);
     } else {
       Alert.alert(
-        'Delete Character',
-        `Delete "${chat.character_name}" and all their chats? This cannot be undone.`,
+        'Delete Chat',
+        `Delete chat with "${chat.character_name}"? This cannot be undone.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Delete', style: 'destructive', onPress: () => doDelete(chat) },
@@ -119,7 +115,6 @@ export default function DashboardScreen() {
                   style={styles.avatarImage}
                   resizeMode="cover"
                   onError={() => {
-                    console.log('[Dashboard] Image failed to load:', item.character_avatar_url);
                     if (item.character_avatar_url) {
                       setImgErrors((prev) => ({ ...prev, [item.character_avatar_url!]: true }));
                     }
@@ -141,10 +136,7 @@ export default function DashboardScreen() {
           </View>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => {
-            console.log('[Dashboard] Trash pressed for:', item.character_name, item.character_id);
-            handleDelete(item);
-          }}
+          onPress={() => handleDelete(item)}
           style={styles.deleteButton}
           activeOpacity={0.5}
         >
@@ -157,7 +149,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.primary }]}>EPal</Text>
+        <Text style={[styles.headerTitle, { color: colors.primary }]}>Chats</Text>
         <View style={styles.headerActions}>
           <Text style={[styles.username, { color: colors.textMuted }]}>{user?.username}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
@@ -170,33 +162,15 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Chats</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('CharacterCreate')}
-            style={[styles.newButton, { backgroundColor: colors.primary }]}
-          >
-            <Plus size={16} color="#ffffff" />
-            <Text style={styles.newButtonText}>New Character</Text>
-          </TouchableOpacity>
-        </View>
-
         {loading ? (
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>Loading...</Text>
         ) : chats.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
             <MessageCircle size={48} color={colors.border} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No characters yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No chats yet</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              Create your first virtual character to start chatting.
+              Go to the Characters tab to create a character and start chatting.
             </Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('CharacterCreate')}
-              style={[styles.emptyButton, { backgroundColor: colors.primary }]}
-            >
-              <Plus size={16} color="#ffffff" />
-              <Text style={styles.emptyButtonText}>Create Character</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
@@ -226,22 +200,6 @@ const styles = StyleSheet.create({
   username: { fontSize: 13, marginRight: 4 },
   iconButton: { padding: 6 },
   content: { flex: 1, padding: 16 },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '600' },
-  newButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  newButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 13 },
   list: { gap: 10 },
   chatCard: {
     borderRadius: 12,
@@ -284,14 +242,5 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   emptyTitle: { fontSize: 16, fontWeight: '600', marginTop: 16 },
-  emptySubtitle: { fontSize: 13, marginTop: 4, marginBottom: 20 },
-  emptyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 6,
-  },
-  emptyButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 14 },
+  emptySubtitle: { fontSize: 13, marginTop: 4, marginBottom: 20, textAlign: 'center', paddingHorizontal: 24 },
 });

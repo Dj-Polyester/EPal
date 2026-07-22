@@ -224,4 +224,87 @@ Rules:
   return c.json({ user_message: userMessage, assistant_message: assistantMessage });
 });
 
+app.post('/greet', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.replace('Bearer ', '') || '';
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ detail: 'Unauthorized' }, 401);
+
+  const { chat_id } = await c.req.json();
+  if (!chat_id) {
+    return c.json({ detail: 'chat_id required' }, 400);
+  }
+
+  // Verify chat ownership
+  const { data: chat } = await supabaseAdmin
+    .from('chats')
+    .select('id, character_id, characters ( name, personality_prompt, avatar_url )')
+    .eq('id', chat_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!chat) return c.json({ detail: 'Chat not found' }, 404);
+
+  const character = chat.characters as any;
+
+  // Get user profile
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('bio, username')
+    .eq('id', user.id)
+    .single();
+
+  const avatarUrl = getPublicUrl(character.avatar_url) || 'No avatar available.';
+  const userName = profile?.username || 'the user';
+
+  const systemPrompt = `You are ${character.name}. ${character.personality_prompt}
+
+User name: ${userName}
+User bio: ${profile?.bio || 'No bio provided.'}
+
+Your visual appearance is captured in your avatar image at: ${avatarUrl}
+
+Rules:
+- Always stay in character. Reflect your personality in every response.
+- Address the user by their name when appropriate.
+- This is the very first message of the conversation. Write a warm, in-character greeting to the user.
+- Keep it concise but friendly. Introduce yourself naturally.
+- Never generate images in a greeting.`;
+
+  let completion;
+  try {
+    completion = await openai.chat.completions.create({
+      model: DEEPSEEK_MODEL,
+      messages: [{ role: 'system', content: systemPrompt }],
+    });
+  } catch (err: any) {
+    console.error('[Chat] DeepSeek API error:', err.status, err.message);
+    return c.json({
+      detail: err.message || 'AI service error',
+      code: 'AI_ERROR',
+    }, 500);
+  }
+
+  const assistantContent = completion.choices[0].message.content || '';
+
+  const { data: assistantMessage } = await supabaseAdmin
+    .from('messages')
+    .insert({
+      chat_id,
+      role: 'assistant',
+      content: assistantContent,
+      media_url: null,
+      media_type: null,
+    })
+    .select()
+    .single();
+
+  await supabaseAdmin
+    .from('chats')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', chat_id);
+
+  return c.json({ assistant_message: assistantMessage });
+});
+
 export default app;

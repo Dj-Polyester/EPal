@@ -35,6 +35,7 @@ app.get('/', async (c) => {
     character_name: chat.characters?.name || 'Unknown',
     character_avatar_url: getPublicUrl(chat.characters?.avatar_url || null),
     character_personality: chat.characters?.personality_prompt || null,
+    greeting_enabled: chat.greeting_enabled ?? false,
     updated_at: chat.updated_at,
   }));
 
@@ -54,6 +55,7 @@ app.get('/:id', async (c) => {
     .select(`
       id,
       character_id,
+      greeting_enabled,
       characters ( name, avatar_url, personality_prompt )
     `)
     .eq('id', chatId)
@@ -69,6 +71,7 @@ app.get('/:id', async (c) => {
     character_name: character.name || 'Unknown',
     character_avatar_url: getPublicUrl(character.avatar_url || null),
     character_personality: character.personality_prompt || null,
+    greeting_enabled: data.greeting_enabled ?? false,
   });
 });
 
@@ -97,6 +100,113 @@ app.get('/:id/messages', async (c) => {
 
   if (error) return c.json({ detail: error.message }, 400);
   return c.json(data || []);
+});
+
+app.post('/', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.replace('Bearer ', '') || '';
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ detail: 'Unauthorized' }, 401);
+
+  const { character_id, greeting_enabled } = await c.req.json();
+  if (!character_id) {
+    return c.json({ detail: 'character_id required' }, 400);
+  }
+
+  // Verify character ownership
+  const { data: character } = await supabaseAdmin
+    .from('characters')
+    .select('id')
+    .eq('id', character_id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!character) return c.json({ detail: 'Character not found' }, 404);
+
+  // Check existing chat for this character
+  const { data: existingChat } = await supabaseAdmin
+    .from('chats')
+    .select('id')
+    .eq('character_id', character_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existingChat) {
+    return c.json({ detail: 'Character already has a chat' }, 409);
+  }
+
+  // Use user's profile default if greeting_enabled not explicitly provided
+  let enableGreeting = greeting_enabled === true;
+  if (typeof greeting_enabled !== 'boolean') {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('default_greeting_enabled')
+      .eq('id', user.id)
+      .single();
+    enableGreeting = profile?.default_greeting_enabled ?? false;
+  }
+
+  let chatBody: any = { user_id: user.id, character_id };
+  if (enableGreeting) chatBody.greeting_enabled = true;
+
+  let chat: any = null;
+  let chatError: any = null;
+
+  const chatResult = await supabaseAdmin
+    .from('chats')
+    .insert(chatBody)
+    .select()
+    .single();
+
+  chat = chatResult.data;
+  chatError = chatResult.error;
+
+  // Fallback if greeting_enabled column missing on chats
+  if (chatError && chatError.message?.includes('greeting_enabled')) {
+    const fallback = await supabaseAdmin
+      .from('chats')
+      .insert({ user_id: user.id, character_id })
+      .select()
+      .single();
+    chat = fallback.data;
+    chatError = fallback.error;
+  }
+
+  if (chatError || !chat) {
+    return c.json({ detail: chatError?.message || 'Chat creation failed' }, 400);
+  }
+
+  return c.json(chat, 201);
+});
+
+app.delete('/:id', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.replace('Bearer ', '') || '';
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ detail: 'Unauthorized' }, 401);
+
+  const chatId = c.req.param('id');
+
+  const { data: chat } = await supabaseAdmin
+    .from('chats')
+    .select('id')
+    .eq('id', chatId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!chat) return c.json({ detail: 'Chat not found' }, 404);
+
+  const { error } = await supabaseAdmin
+    .from('chats')
+    .delete()
+    .eq('id', chatId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    return c.json({ detail: error.message }, 400);
+  }
+
+  return c.json({ success: true });
 });
 
 export default app;

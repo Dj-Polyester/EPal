@@ -37,6 +37,45 @@ async function getUserFromToken(token: string) {
   return data.user;
 }
 
+app.get('/', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.replace('Bearer ', '') || '';
+  const user = await getUserFromToken(token);
+  if (!user) return c.json({ detail: 'Unauthorized' }, 401);
+
+  const { data: characters, error } = await supabaseAdmin
+    .from('characters')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return c.json({ detail: error.message }, 400);
+
+  // Fetch associated chats (at most 1 per character)
+  const characterIds = (characters || []).map((c) => c.id);
+  let chatMap = new Map<string, string>();
+  if (characterIds.length > 0) {
+    const { data: chats } = await supabaseAdmin
+      .from('chats')
+      .select('id, character_id')
+      .in('character_id', characterIds);
+    for (const chat of chats || []) {
+      chatMap.set(chat.character_id, chat.id);
+    }
+  }
+
+  const formatted = (characters || []).map((char) => ({
+    id: char.id,
+    name: char.name,
+    personality_prompt: char.personality_prompt,
+    avatar_url: getPublicUrl(char.avatar_url),
+    chat_id: chatMap.get(char.id) || null,
+    created_at: char.created_at,
+  }));
+
+  return c.json(formatted);
+});
+
 app.get('/prompts/random', async (c) => {
   const name = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
   const prompt = RANDOM_PERSONALITIES[Math.floor(Math.random() * RANDOM_PERSONALITIES.length)];
@@ -89,11 +128,40 @@ app.post('/', async (c) => {
     return c.json({ detail: charError?.message || 'Character creation failed' }, 400);
   }
 
-  const { data: chat, error: chatError } = await supabaseAdmin
+  // Read user's default greeting preference
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('default_greeting_enabled')
+    .eq('id', user.id)
+    .single();
+
+  const defaultGreeting = profile?.default_greeting_enabled ?? false;
+
+  let chatBody: any = { user_id: user.id, character_id: character.id };
+  if (defaultGreeting) chatBody.greeting_enabled = true;
+
+  let chat: any = null;
+  let chatError: any = null;
+
+  const chatResult = await supabaseAdmin
     .from('chats')
-    .insert({ user_id: user.id, character_id: character.id })
+    .insert(chatBody)
     .select()
     .single();
+
+  chat = chatResult.data;
+  chatError = chatResult.error;
+
+  // Fallback if greeting_enabled column missing on chats
+  if (chatError && chatError.message?.includes('greeting_enabled')) {
+    const fallback = await supabaseAdmin
+      .from('chats')
+      .insert({ user_id: user.id, character_id: character.id })
+      .select()
+      .single();
+    chat = fallback.data;
+    chatError = fallback.error;
+  }
 
   if (chatError || !chat) {
     return c.json({ detail: chatError?.message || 'Chat creation failed' }, 400);

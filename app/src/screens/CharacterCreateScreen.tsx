@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -138,9 +139,12 @@ export default function CharacterCreateScreen() {
           characterName: data.character.name,
           avatarUrl: data.character.avatar_url,
         });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        Alert.alert('Error', data.detail || 'Failed to create character');
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -219,6 +223,12 @@ export default function CharacterCreateScreen() {
               )}
             </TouchableOpacity>
           )}
+        </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.hint, { color: colors.textMuted }]}>
+            Tip: Go to Settings to turn on greeting messages. When enabled, characters will automatically say hello when you open a new chat.
+          </Text>
         </View>
 
         <TouchableOpacity

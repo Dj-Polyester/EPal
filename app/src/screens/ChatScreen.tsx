@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -42,7 +42,8 @@ export default function ChatScreen() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
-  const { user } = useAuth();
+  const greetingTriggered = useRef(false);
+  const { user: _user } = useAuth();
   const { colors } = useTheme();
 
   const getToken = async () => {
@@ -50,25 +51,70 @@ export default function ChatScreen() {
     return data.session?.access_token || '';
   };
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (opts?: { skipGreeting?: boolean }) => {
     try {
       const token = await getToken();
       const [chatRes, msgRes] = await Promise.all([
         fetch(`${API_BASE}/api/chats/${chatId}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/chats/${chatId}/messages`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
+      let chatData: any = null;
       if (chatRes.ok) {
-        const chatData = await chatRes.json();
+        chatData = await chatRes.json();
         setPersonality(chatData.character_personality);
       }
       if (msgRes.ok) {
         const msgData = await msgRes.json();
         setMessages(msgData);
+        // If chat is empty and greeting is enabled, trigger it once
+        if (
+          !opts?.skipGreeting &&
+          msgData.length === 0 &&
+          chatData?.greeting_enabled &&
+          !greetingTriggered.current
+        ) {
+          triggerGreeting();
+        }
       }
     } catch {
       // ignore
     } finally {
       setLoading(false);
+    }
+  };
+
+  const triggerGreeting = async () => {
+    if (greetingTriggered.current) return;
+    greetingTriggered.current = true;
+    setTyping(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/chat/greet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ chat_id: chatId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        console.error('[Chat] Greet error:', data);
+        setTyping(false);
+        return;
+      }
+      const data = await res.json();
+      const msg = data.assistant_message as Message | undefined;
+      if (msg) {
+        setMessages((prev) => {
+          if (prev.find((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      }
+      setTyping(false);
+    } catch (err: any) {
+      console.error('[Chat] Greet network error:', err);
+      setTyping(false);
     }
   };
 
@@ -112,11 +158,23 @@ export default function ChatScreen() {
 
   const handleSend = async () => {
     if (!input.trim() || sending) return;
+    const content = input.trim();
+    setInput('');
     setSending(true);
     setTyping(true);
     setApiError(null);
-    const content = input.trim();
-    setInput('');
+
+    // Optimistically show the user message immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: Message = {
+      id: tempId,
+      role: 'user',
+      content,
+      media_url: null,
+      media_type: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
       const token = await getToken();
@@ -131,14 +189,31 @@ export default function ChatScreen() {
       if (!res.ok) {
         const data = await res.json();
         console.error('[Chat] API error:', data);
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
         setTyping(false);
         setSending(false);
         setApiError(data.detail || 'Something went wrong. Please try again.');
         return;
       }
+      const data = await res.json();
+      const userMsg = data.user_message as Message | undefined;
+      const assistantMsg = data.assistant_message as Message | undefined;
+      setMessages((prev) => {
+        let next = prev.filter((m) => m.id !== tempId);
+        if (userMsg && !next.find((m) => m.id === userMsg.id)) {
+          next = [...next, userMsg];
+        }
+        if (assistantMsg && !next.find((m) => m.id === assistantMsg.id)) {
+          next = [...next, assistantMsg];
+        }
+        return next;
+      });
+      setTyping(false);
+      setSending(false);
       setApiError(null);
     } catch (err: any) {
       console.error('[Chat] Network error:', err);
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setTyping(false);
       setSending(false);
       setApiError('Network error. Please check your connection.');

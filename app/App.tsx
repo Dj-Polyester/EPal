@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -10,23 +11,31 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import NameSetupScreen from './src/screens/NameSetupScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
+import ChatsScreen from './src/screens/ChatsScreen';
+import CharactersScreen from './src/screens/CharactersScreen';
 import CharacterCreateScreen from './src/screens/CharacterCreateScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import { MessageCircle, Users } from 'lucide-react-native';
 
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   NameSetup: undefined;
   Welcome: undefined;
-  Dashboard: undefined;
+  Main: undefined;
   CharacterCreate: undefined;
   Chat: { chatId: string; characterName: string; avatarUrl: string | null };
   Settings: undefined;
 };
 
+type MainTabParamList = {
+  Chats: undefined;
+  Characters: undefined;
+};
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function ThemeSync() {
   const { user } = useAuth();
@@ -41,6 +50,33 @@ function ThemeSync() {
   }, [user?.theme, setTheme]);
 
   return null;
+}
+
+function MainTabs() {
+  const { colors } = useTheme();
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+        },
+        tabBarIcon: ({ color, size }: { color: string; size: number }) => {
+          if (route.name === 'Chats') {
+            return <MessageCircle size={size} color={color} />;
+          }
+          return <Users size={size} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Chats" component={ChatsScreen} />
+      <Tab.Screen name="Characters" component={CharactersScreen} />
+    </Tab.Navigator>
+  );
 }
 
 function AppNavigator() {
@@ -74,7 +110,7 @@ function AppNavigator() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
         ) : (
           <>
-            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="CharacterCreate" component={CharacterCreateScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />

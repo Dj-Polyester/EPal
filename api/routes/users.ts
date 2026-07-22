@@ -72,11 +72,22 @@ app.patch('/settings', async (c) => {
   const body = await c.req.json();
   const updates: Record<string, unknown> = {};
   if (body.theme === 'light' || body.theme === 'dark' || body.theme === 'system') updates.theme = body.theme;
+  if (typeof body.default_greeting_enabled === 'boolean') updates.default_greeting_enabled = body.default_greeting_enabled;
 
-  const { error } = await supabaseAdmin
+  let { error } = await supabaseAdmin
     .from('profiles')
     .update(updates)
     .eq('id', userData.user.id);
+
+  // Fallback if default_greeting_enabled column is missing
+  if (error && error.message?.includes('default_greeting_enabled')) {
+    delete updates.default_greeting_enabled;
+    const retry = await supabaseAdmin
+      .from('profiles')
+      .update(updates)
+      .eq('id', userData.user.id);
+    error = retry.error;
+  }
 
   if (error) return c.json({ detail: error.message }, 400);
   return c.json({ success: true });

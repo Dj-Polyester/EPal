@@ -104,6 +104,7 @@ create table if not exists public.profiles (
   bio text,
   onboarding_completed boolean not null default false,
   theme text not null default 'system',
+  default_greeting_enabled boolean not null default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -122,6 +123,7 @@ create table if not exists public.chats (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.profiles(id) on delete cascade not null,
   character_id uuid references public.characters(id) on delete cascade not null,
+  greeting_enabled boolean not null default false,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -141,6 +143,12 @@ alter table public.profiles enable row level security;
 alter table public.characters enable row level security;
 alter table public.chats enable row level security;
 alter table public.messages enable row level security;
+
+-- Grant service_role full table access (required for the backend API)
+grant select, insert, update, delete on public.profiles to service_role;
+grant select, insert, update, delete on public.characters to service_role;
+grant select, insert, update, delete on public.chats to service_role;
+grant select, insert, update, delete on public.messages to service_role;
 
 -- Profiles policies
 create policy "Users can view own profile"

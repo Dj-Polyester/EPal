@@ -21,6 +21,7 @@ async function ensureProfile(userId: string) {
       bio: null,
       onboarding_completed: false,
       theme: 'system',
+      default_greeting_enabled: false,
     });
 
   if (insertError) {

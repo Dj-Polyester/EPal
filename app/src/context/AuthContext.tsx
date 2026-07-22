@@ -11,6 +11,7 @@ interface Profile {
   bio: string | null;
   onboarding_completed: boolean;
   theme: string;
+  default_greeting_enabled?: boolean;
 }
 
 interface AuthContextType {

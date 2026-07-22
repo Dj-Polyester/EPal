@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Modal, ActivityIndicator, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [theme, setLocalTheme] = useState<'light' | 'dark' | 'system'>((user?.theme as 'light' | 'dark' | 'system') ?? 'system');
   const [saving, setSaving] = useState(false);
+  const [greetingEnabled, setGreetingEnabled] = useState(user?.default_greeting_enabled ?? false);
   const [name, setName] = useState(user?.username || '');
   const [nameError, setNameError] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
@@ -44,7 +45,7 @@ export default function SettingsScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ theme: next }),
+        body: JSON.stringify({ theme: next, default_greeting_enabled: greetingEnabled }),
       });
       if (res.ok) await refreshUser();
     } catch {
@@ -52,6 +53,24 @@ export default function SettingsScreen() {
       setTheme(theme);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGreetingToggle = async (next: boolean) => {
+    setGreetingEnabled(next);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/users/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ theme, default_greeting_enabled: next }),
+      });
+      if (res.ok) await refreshUser();
+    } catch {
+      setGreetingEnabled(!next);
     }
   };
 
@@ -175,6 +194,29 @@ export default function SettingsScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
+            <MessageSquare size={20} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Chat Preferences</Text>
+          </View>
+          <View style={styles.rowBetween}>
+            <Text style={[styles.sectionDesc, { color: colors.textMuted, marginBottom: 0 }]}>
+              Greeting messages for new chats
+            </Text>
+            <Switch
+              value={greetingEnabled}
+              onValueChange={handleGreetingToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={greetingEnabled ? '#ffffff' : colors.textMuted}
+            />
+          </View>
+          <Text style={[styles.sectionDesc, { color: colors.textMuted, fontSize: 12, marginTop: 4 }]}>
+            When enabled, characters will automatically send a greeting when a new chat is opened for the first time.
+          </Text>
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
             <User size={20} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Name</Text>
           </View>
@@ -290,6 +332,7 @@ const styles = StyleSheet.create({
   content: { padding: 20 },
   section: { marginBottom: 28 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 16, fontWeight: '600' },
   sectionDesc: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
   themeGrid: { flexDirection: 'row', gap: 12 },

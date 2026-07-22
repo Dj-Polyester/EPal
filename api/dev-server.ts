@@ -68,10 +68,13 @@ serve({
   // Test Supabase connection
   try {
     const { supabaseAdmin } = await import('./lib/supabase');
-    const { error } = await supabaseAdmin.from('profiles').select('count', { count: 'exact', head: true });
+    const { data, error } = await supabaseAdmin.from('profiles').select('id').limit(1);
     if (error) {
-      console.error('[Startup] Supabase connection test FAILED:', error.message);
-      if (error.message.includes('permission denied')) {
+      console.error('[Startup] Supabase connection test FAILED');
+      console.error('[Startup]  error:', error);
+      console.error('[Startup]  message:', error.message || '(empty)');
+      console.error('[Startup]  code:', error.code || '(none)');
+      if (error.message?.includes('permission denied')) {
         console.error('[Startup] Your SUPABASE_SECRET_KEY is likely a publishable key.');
         console.error('[Startup] Get the correct key from: Supabase Dashboard > Project Settings > API > service_role key');
       }
@@ -79,6 +82,6 @@ serve({
       console.log('[Startup] Supabase connection OK');
     }
   } catch (err: any) {
-    console.error('[Startup] Supabase connection test error:', err.message);
+    console.error('[Startup] Supabase connection test error:', err.message || err);
   }
 });
