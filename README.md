@@ -405,3 +405,11 @@ npm run build:app -- --platform android   # or --platform ios
 - If Fal.AI or R2 fails during image generation, the tool returns an error to DeepSeek, which then generates a natural, in-character decline response.
 - All database queries enforce **Row Level Security** so users can only access their own data.
 - The dev server loads `.env.local` with `override: true` behavior (forced via `dotenv.parse`) so `.env.local` always takes precedence over shell env vars.
+
+## License
+
+Copyright © 2026 [Your Name]. All rights reserved.
+
+This project is publicly available for **portfolio and demonstration purposes only**. No permission is granted to copy, modify, distribute, or commercially use this software without prior written permission.
+
+See the `LICENSE` file for details.
